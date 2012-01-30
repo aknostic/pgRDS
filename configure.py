@@ -46,13 +46,12 @@ def create_tablespace(tablespace, location=None):
 	conn = psycopg2.connect(host="localhost",
 							dbname="fashiolista", user="postgres",
 							password="YomQaRgI6tkfeslh6p1uOpNsspV6eL6n")
+	conn.autocommit = True
 	cur = conn.cursor()
 	if location == None or location == "":
-		location = "{0}/{1}".format(pg_dir, tablespace)
+		location = "{0}{1}".format(pg_dir, tablespace)
 
-	#cur.execute("CREATE TABLESPACE '{0}' LOCATION '{1}'".format(tablespace, location))
-	print("CREATE TABLESPACE '{0}' LOCATION '{1}'".format(tablespace, location))
-	conn.commit()
+	cur.execute('CREATE TABLESPACE {0} LOCATION \x27{1}\x27'.format(tablespace, location))
 
 	cur.close()
 	conn.close()
@@ -63,12 +62,15 @@ def alter_table_set_tablespace(table, tablespace):
 							password="YomQaRgI6tkfeslh6p1uOpNsspV6eL6n")
 	cur = conn.cursor()
 
-	#cur.execute("ALTER TABLE '{0}' SET TABLESPACE '{1}'".format(table, tablespace))
-	print("ALTER TABLE '{0}' SET TABLESPACE '{1}'".format(table, tablespace))
+	cur.execute('ALTER TABLE {0} SET TABLESPACE {1}'.format(table, tablespace))
 	conn.commit()
 
 	cur.close()
 	conn.close()
+
+def prepare_database():
+	os.system('sudo -u postgres psql -c "alter user postgres password \x27YomQaRgI6tkfeslh6p1uOpNsspV6eL6n\x27"')
+	os.system("sudo -u postgres psql -c 'create database fashiolista'")
 
 if __name__ == '__main__':
 	region_info = RegionInfo(name=region,
@@ -81,19 +83,25 @@ if __name__ == '__main__':
 						os.environ['HOSTED_ZONE_NAME'].rstrip('.'))
 
 	if sys.argv[3] == "start":
-		#r53_zone.create_record(name, hostname)
-		#ec2.create_tags([instance_id], { "Name": name })
-
-		# postgres is not running yet, so we have all the freedom we need
+		r53_zone.create_record(name, hostname)
+		ec2.create_tags([instance_id], { "Name": name })
+		prepare_database()
+	elif sys.argv[3] == "tablespaces":
 		for tablespace in userdata['tablespaces']:
-			create_tablespace(tablespace['name'])
-			alter_table_set_tablespace(tablespace['name'], tablespace['name'])
+			name = tablespace['name']
+			if name != "main":
+				try:
+					create_tablespace(name)
+				except:
+					print "tablespace {0} already exists?".format(name)
 
-		print "start"
+				try:
+					alter_table_set_tablespace(name, name)
+				except:
+					print "table {0} does not exist yet?".format(name)
 	elif sys.argv[3] == "stop":
 		r53_zone.delete_record(name)
 		ec2.delete_tags( [instance_id], ["Name"])
-		print "stop"
 	elif sys.argv[3] == "restart":
 		print "restart"
 	elif sys.argv[3] == "reload":

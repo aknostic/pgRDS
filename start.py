@@ -76,22 +76,11 @@ def create_mount(dev='/dev/sdf', name='main'):
 		# mount, but first wait until the device is ready
 		os.system("sudo -u postgres /bin/mkdir -p {0}".format(mount))
 		os.system("/bin/mount -t xfs -o defaults {0} {1}".format(dev, mount))
-
-		# if we are creating main we have to initdb the mofo
-		if name == "main":
-			# set the correct permissions
-			os.system("chown -R postgres.postgres {0}".format(mount))
-			os.system("chmod 0700 {0}".format(mount))
-
-			# prepare the new filesystem for postgres
-			os.system("sudo -u postgres /usr/lib/postgresql/9.1/bin/pg_ctl -D {0} initdb".format(mount))
-			os.symlink( "/etc/ssl/certs/ssl-cert-snakeoil.pem",
-						"{0}/server.crt".format(mount))
-			os.symlink( "/etc/ssl/private/ssl-cert-snakeoil.key",
-						"{0}/server.key".format(mount))
 	else:
 		# or grow (if necessary)
 		os.system("/usr/sbin/xfs_growfs {0}".format(mount))
+
+	os.system("chown -R postgres.postgres {0}".format(mount))
 
 
 def set_cron(archive="db-fashiolista-com"):
@@ -122,21 +111,35 @@ if __name__ == '__main__':
 						os.environ['HOSTED_ZONE_NAME'].rstrip('.'))
 
 	try:
-		#set_cron(userdata['bucket'])
+		set_cron(userdata['bucket'])
 
 		# postgres is not running yet, so we have all the freedom we need
 		for tablespace in userdata['tablespaces']:
 			create_device(tablespace['device'], tablespace['size'])
 			create_mount(tablespace['device'], tablespace['name'])
 
-			# create a separate volume for WAL
-			if tablespace['name'] == 'main':
-				device = "/dev/sdw"
-				create_device(device, tablespace['size'])
-				create_mount(device, "main/pg_xlog")
-				add_monitor(device, "WAL")
-
 			add_monitor(tablespace['device'], tablespace['name'])
+
+		# set the correct permissions, and some other necessities
+		mount = pg_dir + "main"
+		os.system("chmod 0700 {0}".format(mount))
+
+		# prepare the new filesystem for postgres
+		os.system("sudo -u postgres /usr/lib/postgresql/9.1/bin/pg_ctl -D {0} initdb".format(mount))
+		os.symlink( "/etc/ssl/certs/ssl-cert-snakeoil.pem",
+					"{0}/server.crt".format(mount))
+		os.symlink( "/etc/ssl/private/ssl-cert-snakeoil.key",
+					"{0}/server.key".format(mount))
+
+		# and now, create a separate WAL mount
+		# (has to be only now, pg_ctl doesn't like a non-empty postgresql dir)
+		os.system("cp -r {0}main/pg_xlog /mnt".format(pg_dir))
+		device = "/dev/sdw"
+		create_device(device, tablespace['size'])
+		create_mount(device, "main/pg_xlog")
+		add_monitor(device, "WAL")
+		os.system("cp -r /mnt/pg_xlog/* {0}main/pg_xlog".format(pg_dir))
+		os.system("chown -R postgres.postgres {0}main/pg_xlog".format(pg_dir))
 
 		monitor()
 	except Exception as e:
