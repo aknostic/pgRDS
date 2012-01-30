@@ -74,6 +74,7 @@ def create_mount(dev='/dev/sdf', name='main'):
 		os.system("/sbin/mkfs.xfs {0}".format(dev))
 
 		# mount, but first wait until the device is ready
+		os.system("sudo -u postgres /bin/mkdir -p {0}".format(mount))
 		os.system("/bin/mount -t xfs -o defaults {0} {1}".format(dev, mount))
 
 		# if we are creating main we have to initdb the mofo
@@ -121,15 +122,21 @@ if __name__ == '__main__':
 						os.environ['HOSTED_ZONE_NAME'].rstrip('.'))
 
 	try:
-		set_cron(os.environ['BUCKET'])
+		#set_cron(userdata['bucket'])
 
 		# postgres is not running yet, so we have all the freedom we need
 		for tablespace in userdata['tablespaces']:
-			create_device( tablespace['device'], tablespace['size'])
-			create_mount( tablespace['device'], tablespace['name'])
+			create_device(tablespace['device'], tablespace['size'])
+			create_mount(tablespace['device'], tablespace['name'])
 
-			add_monitor( tablespace['device'], tablespace['name'])
-			break
+			# create a separate volume for WAL
+			if tablespace['name'] == 'main':
+				device = "/dev/sdw"
+				create_device(device, tablespace['size'])
+				create_mount(device, "main/pg_xlog")
+				add_monitor(device, "WAL")
+
+			add_monitor(tablespace['device'], tablespace['name'])
 
 		monitor()
 	except Exception as e:

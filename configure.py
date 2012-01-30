@@ -40,6 +40,36 @@ except Exception as e:
 
 pg_dir = '/var/lib/postgresql/9.1/'
 
+import psycopg2
+
+def create_tablespace(tablespace, location=None):
+	conn = psycopg2.connect(host="localhost",
+							dbname="fashiolista", user="postgres",
+							password="YomQaRgI6tkfeslh6p1uOpNsspV6eL6n")
+	cur = conn.cursor()
+	if location == None or location == "":
+		location = "{0}/{1}".format(pg_dir, tablespace)
+
+	#cur.execute("CREATE TABLESPACE '{0}' LOCATION '{1}'".format(tablespace, location))
+	print("CREATE TABLESPACE '{0}' LOCATION '{1}'".format(tablespace, location))
+	conn.commit()
+
+	cur.close()
+	conn.close()
+
+def alter_table_set_tablespace(table, tablespace):
+	conn = psycopg2.connect(host="localhost",
+							dbname="fashiolista", user="postgres",
+							password="YomQaRgI6tkfeslh6p1uOpNsspV6eL6n")
+	cur = conn.cursor()
+
+	#cur.execute("ALTER TABLE '{0}' SET TABLESPACE '{1}'".format(table, tablespace))
+	print("ALTER TABLE '{0}' SET TABLESPACE '{1}'".format(table, tablespace))
+	conn.commit()
+
+	cur.close()
+	conn.close()
+
 if __name__ == '__main__':
 	region_info = RegionInfo(name=region,
 							endpoint="ec2.{0}.amazonaws.com".format(region))
@@ -51,8 +81,14 @@ if __name__ == '__main__':
 						os.environ['HOSTED_ZONE_NAME'].rstrip('.'))
 
 	if sys.argv[3] == "start":
-		r53_zone.create_record(name, hostname)
-		ec2.create_tags( [instance_id], { "Name": name })
+		#r53_zone.create_record(name, hostname)
+		#ec2.create_tags([instance_id], { "Name": name })
+
+		# postgres is not running yet, so we have all the freedom we need
+		for tablespace in userdata['tablespaces']:
+			create_tablespace(tablespace['name'])
+			alter_table_set_tablespace(tablespace['name'], tablespace['name'])
+
 		print "start"
 	elif sys.argv[3] == "stop":
 		r53_zone.delete_record(name)
