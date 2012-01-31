@@ -55,6 +55,11 @@ def create_device(device='/dev/sdf', size=10):
 		volume_id = mapping['blockDeviceMapping'][device].volume_id
 	except:
 		volume = ec2.create_volume(size, zone)
+
+		# nicely wait until the volume is available
+		while volume.volume_state() != "available":
+			volume.update()
+
 		volume.attach(instance_id, device)
 		volume_id = volume.id
 
@@ -115,6 +120,9 @@ if __name__ == '__main__':
 
 		# postgres is not running yet, so we have all the freedom we need
 		for tablespace in userdata['tablespaces']:
+			# keep the size of main for later (WAL)
+			if tablespace['name'] == "main":
+				size_of_main = tablespace['size']
 			create_device(tablespace['device'], tablespace['size'])
 			create_mount(tablespace['device'], tablespace['name'])
 
@@ -135,7 +143,7 @@ if __name__ == '__main__':
 		# (has to be only now, pg_ctl doesn't like a non-empty postgresql dir)
 		os.system("cp -r {0}main/pg_xlog /mnt".format(pg_dir))
 		device = "/dev/sdw"
-		create_device(device, tablespace['size'])
+		create_device(device, size_of_main)
 		create_mount(device, "main/pg_xlog")
 		add_monitor(device, "WAL")
 		os.system("cp -r /mnt/pg_xlog/* {0}main/pg_xlog".format(pg_dir))

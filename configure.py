@@ -69,8 +69,10 @@ def alter_table_set_tablespace(table, tablespace):
 	conn.close()
 
 def prepare_database():
+	os.system('sudo -u postgres psql -c "create user root"')
+	os.system('sudo -u postgres psql -c "create database root"')
+	os.system('sudo -u postgres psql -c "grant all on database root to root"')
 	os.system('sudo -u postgres psql -c "alter user postgres password \x27YomQaRgI6tkfeslh6p1uOpNsspV6eL6n\x27"')
-	os.system("sudo -u postgres psql -c 'create database fashiolista'")
 
 if __name__ == '__main__':
 	region_info = RegionInfo(name=region,
