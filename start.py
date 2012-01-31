@@ -25,6 +25,7 @@ from boto.exception import S3CreateError
 from boto.ec2.connection import EC2Connection
 from boto.ec2.regioninfo import RegionInfo
 
+import administration
 from route53 import Route53Zone
 
 try:
@@ -48,13 +49,13 @@ pg_conf = '/etc/postgresql/9.1/main/postgresql.conf'
 # we are going to work with local files, we need our path
 path = os.path.dirname(os.path.abspath(__file__))
 
-def create_device(device='/dev/sdf', size=10):
+def create_device(device='/dev/sdf', snapshot=None, size=10):
 	# if we have the device just don't do anything anymore
 	mapping = ec2.get_instance_attribute(instance_id, 'blockDeviceMapping')
 	try:
 		volume_id = mapping['blockDeviceMapping'][device].volume_id
 	except:
-		volume = ec2.create_volume(size, zone)
+		volume = ec2.create_volume(size, zone, snapshot=snapshot)
 
 		# nicely wait until the volume is available
 		while volume.volume_state() != "available":
@@ -88,7 +89,7 @@ def create_mount(dev='/dev/sdf', name='main'):
 	os.system("chown -R postgres.postgres {0}".format(mount))
 
 
-def set_cron(archive="db-fashiolista-com"):
+def set_cron():
 	cron = "{0}/cron.d/postgres.cron".format(path)
 	os.system("/usr/bin/crontab -u postgres {0}".format(cron))
 
@@ -116,14 +117,18 @@ if __name__ == '__main__':
 						os.environ['HOSTED_ZONE_NAME'].rstrip('.'))
 
 	try:
-		set_cron(userdata['bucket'])
+		set_cron()
 
 		# postgres is not running yet, so we have all the freedom we need
 		for tablespace in userdata['tablespaces']:
 			# keep the size of main for later (WAL)
 			if tablespace['name'] == "main":
 				size_of_main = tablespace['size']
-			create_device(tablespace['device'], tablespace['size'])
+
+			snapshot = administration.get_latest_snapshot(sys.argv[1],
+						sys.argv[2], userdata['cluster'], tablespace['name'])
+			create_device(tablespace['device'], tablespace['size'],
+						snapshot['snapshot'])
 			create_mount(tablespace['device'], tablespace['name'])
 
 			add_monitor(tablespace['device'], tablespace['name'])
@@ -133,11 +138,12 @@ if __name__ == '__main__':
 		os.system("chmod 0700 {0}".format(mount))
 
 		# prepare the new filesystem for postgres
-		os.system("sudo -u postgres /usr/lib/postgresql/9.1/bin/pg_ctl -D {0} initdb".format(mount))
-		os.symlink( "/etc/ssl/certs/ssl-cert-snakeoil.pem",
-					"{0}/server.crt".format(mount))
-		os.symlink( "/etc/ssl/private/ssl-cert-snakeoil.key",
-					"{0}/server.key".format(mount))
+		if not os.path.exists( "{0}/postgresql.conf".format(mount)):
+			os.system("sudo -u postgres /usr/lib/postgresql/9.1/bin/pg_ctl -D {0} initdb".format(mount))
+			os.symlink( "/etc/ssl/certs/ssl-cert-snakeoil.pem",
+						"{0}/server.crt".format(mount))
+			os.symlink( "/etc/ssl/private/ssl-cert-snakeoil.key",
+						"{0}/server.key".format(mount))
 
 		# and now, create a separate WAL mount
 		# (has to be only now, pg_ctl doesn't like a non-empty postgresql dir)
@@ -146,8 +152,9 @@ if __name__ == '__main__':
 		create_device(device, size_of_main)
 		create_mount(device, "main/pg_xlog")
 		add_monitor(device, "WAL")
-		os.system("cp -r /mnt/pg_xlog/* {0}main/pg_xlog".format(pg_dir))
-		os.system("chown -R postgres.postgres {0}main/pg_xlog".format(pg_dir))
+		if not os.path.exists( "{0}/pg_xlog/archive_status)".format(mount)):
+			os.system("cp -r /mnt/pg_xlog/* {0}main/pg_xlog".format(pg_dir))
+			os.system("chown -R postgres.postgres {0}main/pg_xlog".format(pg_dir))
 
 		monitor()
 	except Exception as e:
