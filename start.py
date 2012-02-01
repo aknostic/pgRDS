@@ -102,9 +102,6 @@ def add_monitor(device="/dev/sdf", name="main"):
 	f.write("	if space usage > 80% for 5 times within 15 cycles then alert")
 	f.close()
 
-def monitor():
-	os.system("/usr/sbin/monit reload")
-
 if __name__ == '__main__':
 	region_info = RegionInfo(name=region,
 							endpoint="ec2.{0}.amazonaws.com".format(region))
@@ -127,8 +124,8 @@ if __name__ == '__main__':
 
 			snapshot = administration.get_latest_snapshot(sys.argv[1],
 						sys.argv[2], userdata['cluster'], tablespace['name'])
-			create_device(tablespace['device'], tablespace['size'],
-						snapshot['snapshot'])
+			create_device(tablespace['device'], size=tablespace['size'],
+						snapshot=snapshot)
 			create_mount(tablespace['device'], tablespace['name'])
 
 			add_monitor(tablespace['device'], tablespace['name'])
@@ -149,13 +146,10 @@ if __name__ == '__main__':
 		# (has to be only now, pg_ctl doesn't like a non-empty postgresql dir)
 		os.system("cp -r {0}main/pg_xlog /mnt".format(pg_dir))
 		device = "/dev/sdw"
-		create_device(device, size_of_main)
+		create_device(device, size=size_of_main)
 		create_mount(device, "main/pg_xlog")
-		add_monitor(device, "WAL")
 		if not os.path.exists( "{0}/pg_xlog/archive_status)".format(mount)):
 			os.system("cp -r /mnt/pg_xlog/* {0}main/pg_xlog".format(pg_dir))
 			os.system("chown -R postgres.postgres {0}main/pg_xlog".format(pg_dir))
-
-		monitor()
 	except Exception as e:
-		print "{0} could not be prepared ({1}".format(name, e)
+		print "{0} could not be prepared ({1})".format(name, e)

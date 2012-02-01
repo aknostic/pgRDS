@@ -41,11 +41,14 @@ except Exception as e:
 # we are going to work with local files, we need our path
 path = os.path.dirname(os.path.abspath(__file__))
 
+def unmonitor():
+	# remove all but one
+	os.system("find {0}/etc/monit/ ! -name postgresql -type f -delete".format(path))
+	os.system("/usr/sbin/monit unmonitor postgresql")
+	os.system("/usr/sbin/monit reload")
+
 def unset_cron():
 	os.system("/usr/bin/crontab -u postgres -r")
-
-def unmonitor():
-	os.system("rm {0}/etc/monit/*".format(path))
 
 if __name__ == '__main__':
 	region_info = RegionInfo(name=region,
@@ -59,6 +62,7 @@ if __name__ == '__main__':
 
 	try:
 		unset_cron()
+		unmonitor()
 
 		# postgres is not running yet, so we have all the freedom we need
 		for tablespace in userdata['tablespaces']:
@@ -67,4 +71,4 @@ if __name__ == '__main__':
 		r53_zone.delete_record(name)
 		ec2.delete_tags( [instance_id], ["Name"])
 	except Exception as e:
-		print "{0} could not be unprepared ({1}".format(name, e)
+		print "{0} could not be unprepared ({1})".format(name, e)

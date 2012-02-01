@@ -62,7 +62,12 @@ def get_latest_snapshot(key, access, cluster, name):
 
 	select = "select * from `{0}` where name = '{1}' and created < '{2}' order by created desc limit 1".format(cluster, name, now)
 	snapshots = domain.select(select, consistent_read=True)
-	return snapshots.next()
+
+	try:
+		snapshot = snapshots.next()
+		return snapshot['snapshot']
+	except:
+		return None
 
 def delete_snapshot(key, access, cluster, snapshot_id):
 	sdb = SDBConnection(key, access, region=region_info)

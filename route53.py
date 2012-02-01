@@ -28,6 +28,7 @@ class Route53Zone:
 		self.route53 = Route53Connection(key, access)
 
 	def create_record(self, name, value):
+		print "create_record"
 		changes = ResourceRecordSets(self.route53, self.zone_id)
 
 		change = changes.add_change("CREATE", name + ".", "CNAME", 60)

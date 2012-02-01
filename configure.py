@@ -42,6 +42,10 @@ pg_dir = '/var/lib/postgresql/9.1/'
 
 import psycopg2
 
+def monitor():
+	os.system("/usr/sbin/monit reload")
+	os.system("/usr/sbin/monit monitor postgresql")
+
 def create_tablespace(tablespace, location=None):
 	conn = psycopg2.connect(host="localhost",
 							dbname="fashiolista", user="postgres",
@@ -88,6 +92,8 @@ if __name__ == '__main__':
 		r53_zone.create_record(name, hostname)
 		ec2.create_tags([instance_id], { "Name": name })
 		prepare_database()
+
+		monitor()
 	elif sys.argv[3] == "tablespaces":
 		for tablespace in userdata['tablespaces']:
 			name = tablespace['name']
