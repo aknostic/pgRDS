@@ -69,6 +69,6 @@ if __name__ == '__main__':
 			print tablespace['device']
 
 		r53_zone.delete_record(name)
-		ec2.delete_tags( [instance_id], ["Name"])
+		#ec2.delete_tags( [instance_id], ["Name"])
 	except Exception as e:
 		print "{0} could not be unprepared ({1})".format(name, e)
