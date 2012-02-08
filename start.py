@@ -96,10 +96,14 @@ def set_cron():
 def set_conf():
 	bucket = userdata['cluster'].replace('.', '-')
 	conf = "{0}/etc/postgresql/9.1/main/postgresql.conf".format(path)
-	#os.system("cp {0} {1}".format(conf, pg_conf))
-	print("cp {0} {1}".format(conf, pg_conf))
-	#os.system("/bin/sed -i \x27_s3://[^/]*/_s://{0}/_\x27".format(
-	print("/bin/sed -i \x27s_s3://[^/]*/_s3://{0}/_\x27 {1}".format(bucket, pg_conf))
+	os.system("cp {0} {1}".format(conf, pg_conf))
+	os.system("/bin/sed -i \x27_s3://[^/]*/_s://{0}/_\x27 {1}".format(bucket, pg_conf))
+
+def set_recovery_conf():
+	bucket = userdata['cluster'].replace('.', '-')
+	conf = "{0}/recovery.conf".format(path)
+	os.system("cp {0} {1}/main".format(conf, pg_dir))
+	os.system("/bin/sed -i \x27_s3://[^/]*/_s://{0}/_\x27 {1}/main/recovery.conf".format(bucket, pg_dir))
 
 def add_monitor(device="/dev/sdf", name="main"):
 	f = open( "{0}/etc/monit/{1}".format(path, name), "w")
@@ -149,6 +153,9 @@ if __name__ == '__main__':
 						"{0}/server.crt".format(mount))
 			os.symlink( "/etc/ssl/private/ssl-cert-snakeoil.key",
 						"{0}/server.key".format(mount))
+		else:
+			# we do have a postgresql.conf, we must restore
+			set_recovery_conf()
 
 		# and now, create a separate WAL mount
 		# (has to be only now, pg_ctl doesn't like a non-empty postgresql dir)
