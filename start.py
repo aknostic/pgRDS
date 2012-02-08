@@ -91,7 +91,15 @@ def create_mount(dev='/dev/sdf', name='main'):
 
 def set_cron():
 	cron = "{0}/cron.d/postgres.cron".format(path)
-	os.system("/usr/bin/crontab -u postgres {0}".format(cron))
+	os.system("/usr/bin/crontab {0}".format(cron))
+
+def set_conf():
+	bucket = userdata['cluster'].replace('.', '-')
+	conf = "{0}/etc/postgresql/9.1/main/postgresql.conf".format(path)
+	#os.system("cp {0} {1}".format(conf, pg_conf))
+	print("cp {0} {1}".format(conf, pg_conf))
+	#os.system("/bin/sed -i \x27_s3://[^/]*/_s://{0}/_\x27".format(
+	print("/bin/sed -i \x27s_s3://[^/]*/_s3://{0}/_\x27 {1}".format(bucket, pg_conf))
 
 def add_monitor(device="/dev/sdf", name="main"):
 	f = open( "{0}/etc/monit/{1}".format(path, name), "w")
@@ -151,5 +159,8 @@ if __name__ == '__main__':
 		if not os.path.exists( "{0}/pg_xlog/archive_status)".format(mount)):
 			os.system("cp -r /mnt/pg_xlog/* {0}main/pg_xlog".format(pg_dir))
 			os.system("chown -R postgres.postgres {0}main/pg_xlog".format(pg_dir))
+
+		# always overwrite the conf
+		set_conf()
 	except Exception as e:
 		print "{0} could not be prepared ({1})".format(name, e)

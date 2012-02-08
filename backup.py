@@ -60,7 +60,7 @@ expires = {'hourly': strftime(form, gmtime(time() + 7 * days)),
 		   'weekly': strftime(form, gmtime(time() + 61 * days)),
 		   'monthly': strftime(form, gmtime(time() + 365 * days))}
 
-def make_snapshot(key, access, cluster, name="main", expiration='hourly',
+def make_snapshot(key, access, cluster, name="main", expiration='weekly',
 				device="/dev/sdf"):
 	# first get the mountpoint (requires some energy, but we can...)
 	df = subprocess.Popen(["/bin/df", device], stdout=subprocess.PIPE)
@@ -100,6 +100,28 @@ def purge_snapshots(key, access, name, snapshots):
 										name,
 										snapshot['snapshot'])
 
+def start_backup(label):
+	conn = psycopg2.connect(host="localhost",
+							dbname="fashiolista", user="postgres",
+							password="YomQaRgI6tkfeslh6p1uOpNsspV6eL6n")
+	conn.autocommit = True
+	cur = conn.cursor()
+
+	cur.execute('select pg_start_backup(\x27{0}\x27)'.format(label))
+	cur.close()
+	conn.close()
+
+def stop_backup():
+	conn = psycopg2.connect(host="localhost",
+							dbname="fashiolista", user="postgres",
+							password="YomQaRgI6tkfeslh6p1uOpNsspV6eL6n")
+	conn.autocommit = True
+	cur = conn.cursor()
+
+	cur.execute("select pg_stop_backup()")
+	cur.close()
+	conn.close()
+
 # for convenience we can call this file to make backups directly
 if __name__ == '__main__':
 	# get the bucket, from the name
@@ -108,32 +130,24 @@ if __name__ == '__main__':
 	name = "{0}.{1}".format(name, hosted_zone)
 	cluster = userdata['cluster'].strip()
 
-	def snapshot_all():
+	def snapshot_all(expiration="weekly"):
 		# don't snapshot the WAL or root volume
 		for tablespace in userdata['tablespaces']:
 			backup = make_snapshot(sys.argv[2], sys.argv[3],
 									cluster, tablespace['name'],
+									expiration=expiration,
 									device=tablespace['device'])
 			administration.add_snapshot(sys.argv[2], sys.argv[3],
 									cluster, tablespace['name'], backup)
+			print "created {0} from {1}".format(backup[0], tablespace['name'])
 
 	if "latest" == sys.argv[1]:
 		print administration.get_latest_snapshot(sys.argv[2], sys.argv[3],
 		                                    cluster, sys.argv[4])
 	elif "basebackup" == sys.argv[1]:
-		conn = psycopg2.connect(host="localhost",
-								dbname="fashiolista", user="postgres",
-								password="YomQaRgI6tkfeslh6p1uOpNsspV6eL6n")
-		conn.autocommit = True
-		cur = conn.cursor()
-
-		cur.execute('select pg_start_backup(\x27{0}\x27)'.format(sys.argv[4]))
+		start_backup(sys.argv[4])
 		snapshot_all()
-		cur.execute('select pg_stop_backup()')
-
-		cur.close()
-		conn.close()
-
+		stop_backup()
 	elif "snapshot" == sys.argv[1]:
 		backup = make_snapshot(sys.argv[2], sys.argv[3],
 								cluster, sys.argv[4], sys.argv[5])
