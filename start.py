@@ -82,9 +82,9 @@ def create_mount(dev='/dev/sdf', name='main'):
 		# mount, but first wait until the device is ready
 		os.system("sudo -u postgres /bin/mkdir -p {0}".format(mount))
 		os.system("/bin/mount -t xfs -o defaults {0} {1}".format(dev, mount))
-	else:
-		# or grow (if necessary)
-		os.system("/usr/sbin/xfs_growfs {0}".format(mount))
+
+	# and grow (if necessary)
+	os.system("/usr/sbin/xfs_growfs {0}".format(mount))
 
 	os.system("chown -R postgres.postgres {0}".format(mount))
 
@@ -97,13 +97,27 @@ def set_conf():
 	bucket = userdata['cluster'].replace('.', '-')
 	conf = "{0}/etc/postgresql/9.1/main/postgresql.conf".format(path)
 	os.system("cp {0} {1}".format(conf, pg_conf))
-	os.system("/bin/sed -i \x27_s3://[^/]*/_s://{0}/_\x27 {1}".format(bucket, pg_conf))
+	os.system("/bin/sed -i \x27s_s3://[^/]*/_s://{0}/_\x27 {1}".format(bucket, pg_conf))
 
 def set_recovery_conf():
 	bucket = userdata['cluster'].replace('.', '-')
 	conf = "{0}/recovery.conf".format(path)
 	os.system("cp {0} {1}/main".format(conf, pg_dir))
-	os.system("/bin/sed -i \x27s_s3://[^/]*/%f_s://{0}/archive/wal/{1}/%f_\x27 {2}main/recovery.conf".format(bucket, userdata['restore'], pg_dir))
+	os.system("/bin/sed -i \x27s_s3://.*/%f_s3://{0}/archive/wal/{1}/%f_\x27 {2}main/recovery.conf".format(bucket, userdata['archive'], pg_dir))
+
+	# and make sure we get rid of backup_label
+	os.system("rm -f {0}main/backup_label".format(pg_dir))
+
+def add_postgresql_monitor():
+	f = open( "{0}/etc/monit/postgresql".format(path), "w")
+	f.write("  check process postgresql with pidfile /var/run/postgresql/9.1-main.pid")
+	f.write("    start program = \"/etc/init.d/postgresql start\"")
+	f.write("    stop  program = \"/etc/init.d/postgresql stop\"")
+	f.write("    if failed unixsocket /var/run/postgresql/.s.PGSQL.5432 protocol pgsql then restart")
+	f.write("    if failed unixsocket /var/run/postgresql/.s.PGSQL.5432 protocol pgsql then alert")
+	f.write("    if failed host localhost port 5432 protocol pgsql then restart")
+	f.write("    if failed host localhost port 5432 protocol pgsql then alert")
+	f.write("    group database")
 
 def add_monitor(device="/dev/sdf", name="main"):
 	f = open( "{0}/etc/monit/{1}".format(path, name), "w")
@@ -121,13 +135,10 @@ if __name__ == '__main__':
 	s3 = S3Connection(sys.argv[1], sys.argv[2])
 	r53_zone = Route53Zone(sys.argv[1], sys.argv[2], zone_id)
 
-	# the name (and identity) of SOLR
 	name = "{0}.{1}".format(userdata['name'],
 						os.environ['HOSTED_ZONE_NAME'].rstrip('.'))
 
 	try:
-		set_recovery_conf()
-		sys.exit()
 		set_cron()
 
 		# postgres is not running yet, so we have all the freedom we need

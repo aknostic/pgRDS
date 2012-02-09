@@ -42,9 +42,7 @@ except Exception as e:
 path = os.path.dirname(os.path.abspath(__file__))
 
 def unmonitor():
-	# remove all but one
-	os.system("find {0}/etc/monit/ ! -name postgresql -type f -delete".format(path))
-	os.system("/usr/sbin/monit unmonitor postgresql")
+	os.system("find {0}/etc/monit/ ! -name dummy -type f -delete".format(path))
 	os.system("/usr/sbin/monit reload")
 
 def unset_cron():
@@ -65,10 +63,7 @@ if __name__ == '__main__':
 		unmonitor()
 
 		# postgres is not running yet, so we have all the freedom we need
-		for tablespace in userdata['tablespaces']:
-			print tablespace['device']
-
-		r53_zone.delete_record(name)
-		#ec2.delete_tags( [instance_id], ["Name"])
+		#for tablespace in userdata['tablespaces']:
+		#	print tablespace['device']
 	except Exception as e:
 		print "{0} could not be unprepared ({1})".format(name, e)

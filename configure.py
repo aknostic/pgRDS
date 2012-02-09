@@ -84,7 +84,6 @@ if __name__ == '__main__':
 	ec2 = EC2Connection(sys.argv[1], sys.argv[2], region=region_info)
 	r53_zone = Route53Zone(sys.argv[1], sys.argv[2], zone_id)
 
-	# the name (and identity) of SOLR
 	name = "{0}.{1}".format(userdata['name'],
 						os.environ['HOSTED_ZONE_NAME'].rstrip('.'))
 
@@ -109,7 +108,6 @@ if __name__ == '__main__':
 					print "table {0} does not exist yet?".format(name)
 	elif sys.argv[3] == "stop":
 		r53_zone.delete_record(name)
-		ec2.delete_tags( [instance_id], ["Name"])
 	elif sys.argv[3] == "restart":
 		print "restart"
 	elif sys.argv[3] == "reload":
