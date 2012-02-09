@@ -1,1 +1,0 @@
-  check filesystem main with path /dev/sdf	if failed permission 660 then alert	if failed uid root then alert	if failed gid disk then alert	if space usage > 80% for 5 times within 15 cycles then alert
