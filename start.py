@@ -97,7 +97,7 @@ def set_conf():
 	bucket = userdata['cluster'].replace('.', '-')
 	conf = "{0}/etc/postgresql/9.1/main/postgresql.conf".format(path)
 	os.system("cp {0} {1}".format(conf, pg_conf))
-	os.system("/bin/sed -i \x27s_s3://[^/]*/_s://{0}/_\x27 {1}".format(bucket, pg_conf))
+	os.system("/bin/sed -i \x27s_s3://[^/]*/_s3://{0}/_\x27 {1}".format(bucket, pg_conf))
 
 def set_recovery_conf():
 	bucket = userdata['cluster'].replace('.', '-')
