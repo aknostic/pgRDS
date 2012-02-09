@@ -33,6 +33,7 @@ try:
 
 	userdata = json.load(urllib2.urlopen(url + "user-data"))
 	instance_id = urllib2.urlopen(url + "meta-data/instance-id").read()
+	instance_type = urllib2.urlopen(url + "meta-data/instance-type").read()
 	hostname = urllib2.urlopen(url + "meta-data/public-hostname/").read()
 
 	zone = urllib2.urlopen(url + "meta-data/placement/availability-zone").read()
@@ -95,7 +96,7 @@ def set_cron():
 
 def set_conf():
 	bucket = userdata['cluster'].replace('.', '-')
-	conf = "{0}/etc/postgresql/9.1/main/postgresql.conf".format(path)
+	conf = "{0}/etc/postgresql/9.1/main/{1}.conf".format(path, instance_type)
 	os.system("cp {0} {1}".format(conf, pg_conf))
 	os.system("/bin/sed -i \x27s_s3://[^/]*/_s3://{0}/_\x27 {1}".format(bucket, pg_conf))
 
@@ -104,6 +105,7 @@ def set_recovery_conf():
 	conf = "{0}/recovery.conf".format(path)
 	os.system("cp {0} {1}/main".format(conf, pg_dir))
 	os.system("/bin/sed -i \x27s_s3://.*/%f_s3://{0}/archive/wal/{1}/%f_\x27 {2}main/recovery.conf".format(bucket, userdata['archive'], pg_dir))
+	os.system("/bin/sed -i \x27s/host=[^,]*,/host={0},/\x27 {1}main/recovery.conf".format(userdata['master'],pg_dir))
 
 	# and make sure we get rid of backup_label
 	os.system("rm -f {0}main/backup_label".format(pg_dir))
