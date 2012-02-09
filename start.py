@@ -103,7 +103,7 @@ def set_recovery_conf():
 	bucket = userdata['cluster'].replace('.', '-')
 	conf = "{0}/recovery.conf".format(path)
 	os.system("cp {0} {1}/main".format(conf, pg_dir))
-	os.system("/bin/sed -i \x27_s3://[^/]*/_s://{0}/_\x27 {1}/main/recovery.conf".format(bucket, pg_dir))
+	os.system("/bin/sed -i \x27s_s3://[^/]*/%f_s://{0}/archive/wal/{1}/%f_\x27 {2}main/recovery.conf".format(bucket, userdata['restore'], pg_dir))
 
 def add_monitor(device="/dev/sdf", name="main"):
 	f = open( "{0}/etc/monit/{1}".format(path, name), "w")
@@ -126,6 +126,8 @@ if __name__ == '__main__':
 						os.environ['HOSTED_ZONE_NAME'].rstrip('.'))
 
 	try:
+		set_recovery_conf()
+		sys.exit()
 		set_cron()
 
 		# postgres is not running yet, so we have all the freedom we need
