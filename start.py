@@ -111,7 +111,7 @@ def set_recovery_conf():
 	try:
 		os.system("/bin/sed -i \x27s/host=[^ ]* /host={0} /\x27 {1}main/recovery.conf".format(userdata['master'],pg_dir))
 	except:
-		os.system("/bin/sed -i \x27s/^primary_conninfo/#primary_conninfo/\x27 {1}main/recovery.conf".format(pg_dir))
+		os.system("/bin/sed -i \x27s/^primary_conninfo/#primary_conninfo/\x27 {0}main/recovery.conf".format(pg_dir))
 
 	# and make sure we get rid of backup_label
 	os.system("rm -f {0}main/backup_label".format(pg_dir))
@@ -136,6 +136,21 @@ def add_monitor(device="/dev/sdf", name="main"):
 	f.write("	if space usage > 80% for 5 times within 15 cycles then alert")
 	f.close()
 
+def meminfo():
+    """
+    dict of data from meminfo (str:int).
+    Values are in kilobytes.
+    """
+    re_parser = re.compile(r'^(?P<key>\S*):\s*(?P<value>\d*)\s*kB')
+    result = dict()
+    for line in open('/proc/meminfo'):
+        match = re_parser.match(line)
+        if not match:
+            continue # skip lines that don't parse
+        key, value = match.groups(['key', 'value'])
+        result[key] = int(value)
+    return result
+
 if __name__ == '__main__':
 	region_info = RegionInfo(name=region,
 							endpoint="ec2.{0}.amazonaws.com".format(region))
@@ -146,7 +161,8 @@ if __name__ == '__main__':
 	name = "{0}.{1}".format(userdata['name'],
 						os.environ['HOSTED_ZONE_NAME'].rstrip('.'))
 
-	try:
+	#try:
+	if True:
 		set_cron()
 
 		# postgres is not running yet, so we have all the freedom we need
@@ -188,7 +204,12 @@ if __name__ == '__main__':
 			os.system("cp -r /mnt/pg_xlog/* {0}main/pg_xlog".format(pg_dir))
 			os.system("chown -R postgres.postgres {0}main/pg_xlog".format(pg_dir))
 
+		# we tuned postgres for instance types, we also need help the kernel along
+		os.system('sysctl -w "kernel.shmall=4194304"')
+		print meminfo()
+		os.system('sysctl -w "kernel.shmmax={0}"'.format(meminfo()['MemTotal'] * 1000))
+
 		# always overwrite the conf
 		set_conf()
-	except Exception as e:
-		print "{0} could not be prepared ({1})".format(name, e)
+	#except Exception as e:
+	#	print "{0} could not be prepared ({1})".format(name, e)
