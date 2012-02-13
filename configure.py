@@ -23,6 +23,8 @@ from boto.ec2.regioninfo import RegionInfo
 
 from route53 import Route53Zone
 
+import settings
+
 try:
 	url = "http://169.254.169.254/latest/"
 
@@ -47,9 +49,10 @@ def monitor():
 	os.system("/usr/sbin/monit monitor postgresql")
 
 def create_tablespace(tablespace, location=None):
-	conn = psycopg2.connect(host="localhost",
-							dbname="fashiolista", user="postgres",
-							password="YomQaRgI6tkfeslh6p1uOpNsspV6eL6n")
+	conn = psycopg2.connect(host=settings.host,
+							dbname=settings.database_name,
+							user=settings.database_user,
+							password=settings.database_password)
 	conn.autocommit = True
 	cur = conn.cursor()
 	if location == None or location == "":
@@ -61,9 +64,10 @@ def create_tablespace(tablespace, location=None):
 	conn.close()
 
 def alter_table_set_tablespace(table, tablespace):
-	conn = psycopg2.connect(host="localhost",
-							dbname="fashiolista", user="postgres",
-							password="YomQaRgI6tkfeslh6p1uOpNsspV6eL6n")
+	conn = psycopg2.connect(host=settings.host,
+							dbname=settings.database_name,
+							user=settings.database_user,
+							password=settings.database_password)
 	cur = conn.cursor()
 
 	cur.execute('ALTER TABLE {0} SET TABLESPACE {1}'.format(table, tablespace))
@@ -76,7 +80,7 @@ def prepare_database():
 	os.system('sudo -u postgres psql -c "create user root"')
 	os.system('sudo -u postgres psql -c "create database root"')
 	os.system('sudo -u postgres psql -c "grant all on database root to root"')
-	os.system('sudo -u postgres psql -c "alter user postgres password \x27YomQaRgI6tkfeslh6p1uOpNsspV6eL6n\x27"')
+	os.system('sudo -u postgres psql -c "alter user {0} password \x27{1}\x27"'.format(settings.database_user, settings.database_password)
 
 if __name__ == '__main__':
 	region_info = RegionInfo(name=region,
