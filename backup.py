@@ -37,7 +37,7 @@ from boto.s3.key import Key
 
 import psycopg2
 
-import administration
+import settins, administration
 
 try:
 	url = "http://169.254.169.254/latest/"
@@ -101,9 +101,10 @@ def purge_snapshots(key, access, name, snapshots):
 										snapshot['snapshot'])
 
 def start_backup(label):
-	conn = psycopg2.connect(host="localhost",
-							dbname="fashiolista", user="postgres",
-							password="YomQaRgI6tkfeslh6p1uOpNsspV6eL6n")
+	conn = psycopg2.connect(host=settings.host,
+							dbname=settings.database_name,
+							user=settings.database_user,
+							password=settings.database_password)
 	conn.autocommit = True
 	cur = conn.cursor()
 
@@ -112,15 +113,31 @@ def start_backup(label):
 	conn.close()
 
 def stop_backup():
-	conn = psycopg2.connect(host="localhost",
-							dbname="fashiolista", user="postgres",
-							password="YomQaRgI6tkfeslh6p1uOpNsspV6eL6n")
+	conn = psycopg2.connect(host=settings.host,
+							dbname=settings.database_name,
+							user=settings.database_user,
+							password=settings.database_password)
 	conn.autocommit = True
 	cur = conn.cursor()
 
 	cur.execute("select pg_stop_backup()")
 	cur.close()
 	conn.close()
+
+def is_in_recovery():
+	conn = psycopg2.connect(host=settings.host,
+							dbname=settings.database_name,
+							user=settings.database_user,
+							password=settings.database_password)
+	conn.autocommit = True
+	cur = conn.cursor()
+
+	cur.execute("select pg_is_in_recovery()")
+	in_recovery = cur.fetchone()[0]
+	cur.close()
+	conn.close()
+
+	return in_recovery == True
 
 # for convenience we can call this file to make backups directly
 if __name__ == '__main__':
@@ -145,9 +162,10 @@ if __name__ == '__main__':
 		print administration.get_latest_snapshot(sys.argv[2], sys.argv[3],
 		                                    cluster, sys.argv[4])
 	elif "basebackup" == sys.argv[1]:
-		start_backup(sys.argv[4])
-		snapshot_all()
-		stop_backup()
+		if not is_in_recovery():
+			start_backup(sys.argv[4])
+			snapshot_all()
+			stop_backup()
 	elif "snapshot" == sys.argv[1]:
 		backup = make_snapshot(sys.argv[2], sys.argv[3],
 								cluster, sys.argv[4], sys.argv[5])
