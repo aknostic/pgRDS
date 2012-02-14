@@ -25,7 +25,7 @@ from boto.exception import S3CreateError
 from boto.ec2.connection import EC2Connection
 from boto.ec2.regioninfo import RegionInfo
 
-import administration
+import settings, administration
 from route53 import Route53Zone
 
 try:
@@ -103,15 +103,19 @@ def set_conf():
 
 def set_recovery_conf():
 	bucket = userdata['cluster'].replace('.', '-')
-	conf = "{0}/recovery.conf".format(path)
-	os.system("cp {0} {1}/main".format(conf, pg_dir))
-	os.system("/bin/sed -i \x27s_s3://.*/%f_s3://{0}/archive/wal/%f_\x27 {1}main/recovery.conf".format(bucket, pg_dir))
+    f = open( "{0}/main/recovery.conf".format(pg_dir), "w")
+
+	f.write("restore_command = '/usr/bin/s3cmd --config=/var/lib/postgresql/.s3cfg get s3://{0}/archive/wal/%f %p'".format(bucket))
+	f.write("standby_mode = on")
 
 	# lets by humble, lets try to be a slave first
 	try:
-		os.system("/bin/sed -i \x27s/host=[^ ]* /host={0} /\x27 {1}main/recovery.conf".format(userdata['master'],pg_dir))
+		f.write("primary_conninfo = 'host={0} port=5432 user={1} password={2}'".format(userdata['master'], settings.database_user, settings.database_password))
 	except:
-		os.system("/bin/sed -i \x27s/^primary_conninfo/#primary_conninfo/\x27 {0}main/recovery.conf".format(pg_dir))
+		pass
+
+	f.write("recovery_target_timeline = latest")
+	f.close()
 
 	# and make sure we get rid of backup_label
 	os.system("rm -f {0}main/backup_label".format(pg_dir))
