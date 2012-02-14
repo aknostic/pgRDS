@@ -165,6 +165,12 @@ if __name__ == '__main__':
 	try:
 		set_cron()
 
+		# are we a new cluster, or a clone from another?
+		try:
+			cluster = userdata['clone']
+		except:
+			cluster = userdata['cluster']
+
 		# postgres is not running yet, so we have all the freedom we need
 		for tablespace in userdata['tablespaces']:
 			# keep the size of main for later (WAL)
@@ -172,7 +178,7 @@ if __name__ == '__main__':
 				size_of_main = tablespace['size']
 
 			snapshot = administration.get_latest_snapshot(sys.argv[1],
-						sys.argv[2], userdata['cluster'], tablespace['name'])
+						sys.argv[2], cluster, tablespace['name'])
 			create_device(tablespace['device'], size=tablespace['size'],
 						snapshot=snapshot)
 			create_mount(tablespace['device'], tablespace['name'])
