@@ -126,6 +126,7 @@ def add_postgresql_monitor():
 	f.write("    if failed host localhost port 5432 protocol pgsql then restart")
 	f.write("    if failed host localhost port 5432 protocol pgsql then alert")
 	f.write("    group database")
+	f.close()
 
 def add_monitor(device="/dev/sdf", name="main"):
 	f = open( "{0}/etc/monit/{1}".format(path, name), "w")
@@ -207,7 +208,7 @@ if __name__ == '__main__':
 		# we tuned postgres for instance types, we also need help the kernel along
 		os.system('sysctl -w "kernel.shmall=4194304"')
 		print meminfo()
-		os.system('sysctl -w "kernel.shmmax={0}"'.format(meminfo()['MemTotal'] * 1000))
+		os.system('sysctl -w "kernel.shmmax={0}"'.format(meminfo()['MemTotal'] * 1024))
 
 		# always overwrite the conf
 		set_conf()

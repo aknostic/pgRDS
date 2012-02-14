@@ -55,10 +55,10 @@ if __name__ == '__main__':
 	r53_zone = Route53Zone(sys.argv[1], sys.argv[2], zone_id)
 
 	# the name (and identity) of SOLR
-	name = "{0}.{1}".format(userdata['name'],
-						os.environ['HOSTED_ZONE_NAME'].rstrip('.'))
+	name = "{0}.{1}".format(userdata['name'], os.environ['HOSTED_ZONE_NAME'])
 
 	try:
+		r53_zone.delete_record(name.rstrip('.'))
 		unset_cron()
 		unmonitor()
 
