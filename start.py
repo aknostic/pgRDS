@@ -162,8 +162,7 @@ if __name__ == '__main__':
 	name = "{0}.{1}".format(userdata['name'],
 						os.environ['HOSTED_ZONE_NAME'].rstrip('.'))
 
-	#try:
-	if True:
+	try:
 		set_cron()
 
 		# postgres is not running yet, so we have all the freedom we need
@@ -204,6 +203,7 @@ if __name__ == '__main__':
 		if not os.path.exists( "{0}/pg_xlog/archive_status)".format(mount)):
 			os.system("cp -r /mnt/pg_xlog/* {0}main/pg_xlog".format(pg_dir))
 			os.system("chown -R postgres.postgres {0}main/pg_xlog".format(pg_dir))
+		add_monitor(device, "pg_xlog")
 
 		# we tuned postgres for instance types, we also need help the kernel along
 		os.system('sysctl -w "kernel.shmall=4194304"')
@@ -212,5 +212,6 @@ if __name__ == '__main__':
 
 		# always overwrite the conf
 		set_conf()
-	#except Exception as e:
-	#	print "{0} could not be prepared ({1})".format(name, e)
+		add_postgresql_monitor()
+	except Exception as e:
+		print "{0} could not be prepared ({1})".format(name, e)
