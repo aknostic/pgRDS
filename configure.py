@@ -80,7 +80,7 @@ def prepare_database():
 	os.system('sudo -u postgres psql -c "create user root"')
 	os.system('sudo -u postgres psql -c "create database root"')
 	os.system('sudo -u postgres psql -c "grant all on database root to root"')
-	os.system('sudo -u postgres psql -c "alter user {0} password \x27{1}\x27"'.format(settings.database_user, settings.database_password)
+	os.system('sudo -u postgres psql -c "alter user {0} password \x27{1}\x27"'.format(settings.database_user, settings.database_password))
 
 if __name__ == '__main__':
 	region_info = RegionInfo(name=region,
@@ -111,7 +111,8 @@ if __name__ == '__main__':
 				except:
 					print "table {0} does not exist yet?".format(name)
 	elif sys.argv[3] == "stop":
-		r53_zone.delete_record(name)
+		# we change r53 in stop.py, as soon as possible
+		print "stop"
 	elif sys.argv[3] == "restart":
 		print "restart"
 	elif sys.argv[3] == "reload":

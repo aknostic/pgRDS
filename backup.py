@@ -37,7 +37,7 @@ from boto.s3.key import Key
 
 import psycopg2
 
-import settins, administration
+import settings, administration
 
 try:
 	url = "http://169.254.169.254/latest/"
