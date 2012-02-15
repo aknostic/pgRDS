@@ -103,18 +103,18 @@ def set_conf():
 
 def set_recovery_conf():
 	bucket = userdata['cluster'].replace('.', '-')
-    f = open( "{0}/main/recovery.conf".format(pg_dir), "w")
+	f = open( "{0}/main/recovery.conf".format(pg_dir), "w")
 
-	f.write("restore_command = '/usr/bin/s3cmd --config=/var/lib/postgresql/.s3cfg get s3://{0}/archive/wal/%f %p'".format(bucket))
-	f.write("standby_mode = on")
+	f.write("restore_command = '/usr/bin/s3cmd --config=/var/lib/postgresql/.s3cfg get s3://{0}/archive/wal/%f %p'\n".format(bucket))
+	f.write("standby_mode = on\n")
 
 	# lets by humble, lets try to be a slave first
 	try:
-		f.write("primary_conninfo = 'host={0} port=5432 user={1} password={2}'".format(userdata['master'], settings.database_user, settings.database_password))
+		f.write("primary_conninfo = 'host={0} port=5432 user={1} password={2}'\n".format(userdata['master'], settings.database_user, settings.database_password))
 	except:
 		pass
 
-	f.write("recovery_target_timeline = latest")
+	f.write("recovery_target_timeline = latest\n")
 	f.close()
 
 	# and make sure we get rid of backup_label
@@ -123,13 +123,13 @@ def set_recovery_conf():
 def add_postgresql_monitor():
 	f = open( "{0}/etc/monit/postgresql".format(path), "w")
 	f.write("  check process postgresql with pidfile /var/run/postgresql/9.1-main.pid")
-	f.write("    start program = \"/etc/init.d/postgresql start\"")
-	f.write("    stop  program = \"/etc/init.d/postgresql stop\"")
-	f.write("    if failed unixsocket /var/run/postgresql/.s.PGSQL.5432 protocol pgsql then restart")
-	f.write("    if failed unixsocket /var/run/postgresql/.s.PGSQL.5432 protocol pgsql then alert")
-	f.write("    if failed host localhost port 5432 protocol pgsql then restart")
-	f.write("    if failed host localhost port 5432 protocol pgsql then alert")
-	f.write("    group database")
+	f.write("	start program = \"/etc/init.d/postgresql start\"")
+	f.write("	stop  program = \"/etc/init.d/postgresql stop\"")
+	f.write("	if failed unixsocket /var/run/postgresql/.s.PGSQL.5432 protocol pgsql then restart")
+	f.write("	if failed unixsocket /var/run/postgresql/.s.PGSQL.5432 protocol pgsql then alert")
+	f.write("	if failed host localhost port 5432 protocol pgsql then restart")
+	f.write("	if failed host localhost port 5432 protocol pgsql then alert")
+	f.write("	group database")
 	f.close()
 
 def add_monitor(device="/dev/sdf", name="main"):
@@ -142,19 +142,19 @@ def add_monitor(device="/dev/sdf", name="main"):
 	f.close()
 
 def meminfo():
-    """
-    dict of data from meminfo (str:int).
-    Values are in kilobytes.
-    """
-    re_parser = re.compile(r'^(?P<key>\S*):\s*(?P<value>\d*)\s*kB')
-    result = dict()
-    for line in open('/proc/meminfo'):
-        match = re_parser.match(line)
-        if not match:
-            continue # skip lines that don't parse
-        key, value = match.groups(['key', 'value'])
-        result[key] = int(value)
-    return result
+	"""
+	dict of data from meminfo (str:int).
+	Values are in kilobytes.
+	"""
+	re_parser = re.compile(r'^(?P<key>\S*):\s*(?P<value>\d*)\s*kB')
+	result = dict()
+	for line in open('/proc/meminfo'):
+		match = re_parser.match(line)
+		if not match:
+			continue # skip lines that don't parse
+		key, value = match.groups(['key', 'value'])
+		result[key] = int(value)
+	return result
 
 if __name__ == '__main__':
 	region_info = RegionInfo(name=region,
