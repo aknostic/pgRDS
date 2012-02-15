@@ -160,7 +160,7 @@ if __name__ == '__main__':
 
 	if "latest" == sys.argv[1]:
 		print administration.get_latest_snapshot(sys.argv[2], sys.argv[3],
-		                                    cluster, sys.argv[4])
+											cluster, sys.argv[4])
 	elif "basebackup" == sys.argv[1]:
 		if not is_in_recovery():
 			start_backup(sys.argv[4])
