@@ -100,6 +100,11 @@ def set_conf():
 	os.system("cp {0} {1}".format(conf, pg_conf))
 	os.system("/bin/chown postgres.postgres {0}".format(pg_conf))
 	os.system("/bin/sed -i \x27s_s3://[^/]*/_s3://{0}/_\x27 {1}".format(bucket, pg_conf))
+	try:
+		slow = userdata['sow']
+		os.system("/bin/sed -i \x27s/log_min_duration_statement.*/log_min_duration_statement = {0}/\x27 {1}".format(slow, pg_conf))
+	except:
+		pass
 
 def set_recovery_conf():
 	bucket = userdata['cluster'].replace('.', '-')
@@ -217,7 +222,6 @@ if __name__ == '__main__':
 
 		# we tuned postgres for instance types, we also need help the kernel along
 		os.system('sysctl -w "kernel.shmall=4194304"')
-		print meminfo()
 		os.system('sysctl -w "kernel.shmmax={0}"'.format(meminfo()['MemTotal'] * 1024))
 
 		# always overwrite the conf
