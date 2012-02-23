@@ -1,4 +1,5 @@
 .*.swp
 *.pyc
 config.sh
+settings.py
 etc/monit/*
