@@ -44,6 +44,9 @@ pg_dir = '/var/lib/postgresql/9.1/'
 
 import psycopg2
 
+def pgbouncer():
+	os.system("/etc/init.d/pgbouncer restart")
+
 def monitor():
 	os.system("/usr/sbin/monit reload")
 	os.system("/usr/sbin/monit monitor postgresql")
@@ -101,6 +104,7 @@ if __name__ == '__main__':
 		except:
 			prepare_database()
 
+		pgbouncer()
 		monitor()
 	elif sys.argv[3] == "tablespaces":
 		for tablespace in userdata['tablespaces']:

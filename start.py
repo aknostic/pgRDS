@@ -46,6 +46,7 @@ except Exception as e:
 
 pg_dir = '/var/lib/postgresql/9.1/'
 pg_conf = '/etc/postgresql/9.1/main/postgresql.conf'
+pgb_conf = '/etc/pgbouncer/pgbouncer.ini'
 
 # we are going to work with local files, we need our path
 path = os.path.dirname(os.path.abspath(__file__))
@@ -97,7 +98,9 @@ def set_cron():
 def set_conf():
 	bucket = userdata['cluster'].replace('.', '-')
 	conf = "{0}/etc/postgresql/9.1/main/{1}.conf".format(path, instance_type)
+	my_pgb_conf = "{0}/etc/pgbouncer/pgbouncer.ini".format(path)
 	os.system("cp {0} {1}".format(conf, pg_conf))
+	os.system("cp {0} {1}".format(my_pgb_conf, pgb_conf))
 	os.system("/bin/chown postgres.postgres {0}".format(pg_conf))
 	os.system("/bin/sed -i \x27s_s3://[^/]*/_s3://{0}/_\x27 {1}".format(bucket, pg_conf))
 	try:
