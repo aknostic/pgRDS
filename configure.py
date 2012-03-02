@@ -29,6 +29,10 @@ try:
 	url = "http://169.254.169.254/latest/"
 
 	userdata = json.load(urllib2.urlopen(url + "user-data"))
+	if not userdata.has_key('tablespaces'):
+		userdata['tablespaces'] = { "device" : "/dev/sdf",
+								"name" : "main", "size" : 2}
+	
 	instance_id = urllib2.urlopen(url + "meta-data/instance-id").read()
 	hostname = urllib2.urlopen(url + "meta-data/public-hostname/").read()
 
@@ -45,6 +49,7 @@ pg_dir = '/var/lib/postgresql/9.1/'
 import psycopg2
 
 def pgbouncer():
+	print('sudo -u postgres psql -t -c "select ' + "'\"'||rolname||'\"'||' \"'||rolpassword||'\"' from pg_authid ;" + '" | sed ' + "'s/^\s*//' | sed '/^$/d' > /etc/pgbouncer/userlist.txt")
 	os.system("/etc/init.d/pgbouncer restart")
 
 def monitor():

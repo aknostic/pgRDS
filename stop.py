@@ -61,9 +61,5 @@ if __name__ == '__main__':
 		r53_zone.delete_record(name.rstrip('.'))
 		unset_cron()
 		unmonitor()
-
-		# postgres is not running yet, so we have all the freedom we need
-		#for tablespace in userdata['tablespaces']:
-		#	print tablespace['device']
 	except Exception as e:
 		print "{0} could not be unprepared ({1})".format(name, e)

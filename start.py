@@ -32,6 +32,10 @@ try:
 	url = "http://169.254.169.254/latest/"
 
 	userdata = json.load(urllib2.urlopen(url + "user-data"))
+	if not userdata.has_key('tablespaces'):
+		userdata['tablespaces'] = { "device" : "/dev/sdf",
+								"name" : "main", "size" : 2}
+	
 	instance_id = urllib2.urlopen(url + "meta-data/instance-id").read()
 	instance_type = urllib2.urlopen(url + "meta-data/instance-type").read()
 	hostname = urllib2.urlopen(url + "meta-data/public-hostname/").read()
@@ -184,25 +188,23 @@ if __name__ == '__main__':
 			cluster = userdata['cluster']
 
 		# postgres is not running yet, so we have all the freedom we need
-		if userdata.has_key('tablespaces'):
-			for tablespace in userdata['tablespaces']:
-				# keep the size of main for later (WAL)
-				if tablespace['name'] == "main":
-					size_of_main = tablespace['size']
+		#if userdata.has_key('tablespaces'):
+		for tablespace in userdata['tablespaces']:
+			# keep the size of main for later (WAL)
+			if tablespace['name'] == "main":
+				size_of_main = tablespace['size']
 
-				snapshot = administration.get_latest_snapshot(sys.argv[1],
-						sys.argv[2], cluster, tablespace['name'])
-				create_device(tablespace['device'], size=tablespace['size'],
-						snapshot=snapshot)
-				create_mount(tablespace['device'], tablespace['name'])
+			snapshot = administration.get_latest_snapshot(sys.argv[1],
+					sys.argv[2], cluster, tablespace['name'])
+			create_device(tablespace['device'], size=tablespace['size'],
+					snapshot=snapshot)
+			create_mount(tablespace['device'], tablespace['name'])
 
-				add_monitor(tablespace['device'], tablespace['name'])
+			add_monitor(tablespace['device'], tablespace['name'])
 
-			# set the correct permissions, and some other necessities
-			mount = pg_dir + "main"
-		else:
-			mount = pg_dir + "main"
-			os.system("rm -rf {0}/*".format(mount))
+		# set the correct permissions, and some other necessities
+		mount = pg_dir + "main"
+		os.system("rm -rf {0}/*".format(mount))
 
 		os.system("chmod 0700 {0}".format(mount))
 
@@ -218,16 +220,15 @@ if __name__ == '__main__':
 			set_recovery_conf()
 
 		# and now, create a separate WAL mount
-		if userdata.has_key('tablespaces'):
-			# (has to be only now, pg_ctl doesn't like a non-empty pg dir)
-			os.system("cp -r {0}main/pg_xlog /mnt".format(pg_dir))
-			device = "/dev/sdw"
-			create_device(device, size=size_of_main)
-			create_mount(device, "main/pg_xlog")
-			if not os.path.exists( "{0}/pg_xlog/archive_status)".format(mount)):
-				os.system("cp -r /mnt/pg_xlog/* {0}main/pg_xlog".format(pg_dir))
-				os.system("chown -R postgres.postgres {0}main/pg_xlog".format(pg_dir))
-			add_monitor(device, "pg_xlog")
+		# (has to be only now, pg_ctl doesn't like a non-empty pg dir)
+		os.system("cp -r {0}main/pg_xlog /mnt".format(pg_dir))
+		device = "/dev/sdw"
+		create_device(device, size=size_of_main)
+		create_mount(device, "main/pg_xlog")
+		if not os.path.exists( "{0}/pg_xlog/archive_status)".format(mount)):
+			os.system("cp -r /mnt/pg_xlog/* {0}main/pg_xlog".format(pg_dir))
+			os.system("chown -R postgres.postgres {0}main/pg_xlog".format(pg_dir))
+		add_monitor(device, "pg_xlog")
 
 		# we tuned postgres for instance types, we also need help the kernel along
 		os.system('sysctl -w "kernel.shmall=4194304"')
