@@ -171,7 +171,7 @@ if __name__ == '__main__':
 	name = "{0}.{1}".format(userdata['name'],
 						os.environ['HOSTED_ZONE_NAME'].rstrip('.'))
 
-	try:
+	if True: #try:
 		set_cron()
 
 		# are we a new cluster, or a clone from another?
@@ -181,21 +181,26 @@ if __name__ == '__main__':
 			cluster = userdata['cluster']
 
 		# postgres is not running yet, so we have all the freedom we need
-		for tablespace in userdata['tablespaces']:
-			# keep the size of main for later (WAL)
-			if tablespace['name'] == "main":
-				size_of_main = tablespace['size']
+		if userdata.has_key('tablespaces'):
+			for tablespace in userdata['tablespaces']:
+				# keep the size of main for later (WAL)
+				if tablespace['name'] == "main":
+					size_of_main = tablespace['size']
 
-			snapshot = administration.get_latest_snapshot(sys.argv[1],
+				snapshot = administration.get_latest_snapshot(sys.argv[1],
 						sys.argv[2], cluster, tablespace['name'])
-			create_device(tablespace['device'], size=tablespace['size'],
+				create_device(tablespace['device'], size=tablespace['size'],
 						snapshot=snapshot)
-			create_mount(tablespace['device'], tablespace['name'])
+				create_mount(tablespace['device'], tablespace['name'])
 
-			add_monitor(tablespace['device'], tablespace['name'])
+				add_monitor(tablespace['device'], tablespace['name'])
 
-		# set the correct permissions, and some other necessities
-		mount = pg_dir + "main"
+			# set the correct permissions, and some other necessities
+			mount = pg_dir + "main"
+		else:
+			mount = pg_dir + "main"
+			os.system("rm -rf {0}/*".format(mount))
+
 		os.system("chmod 0700 {0}".format(mount))
 
 		# prepare the new filesystem for postgres
@@ -210,15 +215,16 @@ if __name__ == '__main__':
 			set_recovery_conf()
 
 		# and now, create a separate WAL mount
-		# (has to be only now, pg_ctl doesn't like a non-empty postgresql dir)
-		os.system("cp -r {0}main/pg_xlog /mnt".format(pg_dir))
-		device = "/dev/sdw"
-		create_device(device, size=size_of_main)
-		create_mount(device, "main/pg_xlog")
-		if not os.path.exists( "{0}/pg_xlog/archive_status)".format(mount)):
-			os.system("cp -r /mnt/pg_xlog/* {0}main/pg_xlog".format(pg_dir))
-			os.system("chown -R postgres.postgres {0}main/pg_xlog".format(pg_dir))
-		add_monitor(device, "pg_xlog")
+		if userdata.has_key('tablespaces'):
+			# (has to be only now, pg_ctl doesn't like a non-empty pg dir)
+			os.system("cp -r {0}main/pg_xlog /mnt".format(pg_dir))
+			device = "/dev/sdw"
+			create_device(device, size=size_of_main)
+			create_mount(device, "main/pg_xlog")
+			if not os.path.exists( "{0}/pg_xlog/archive_status)".format(mount)):
+				os.system("cp -r /mnt/pg_xlog/* {0}main/pg_xlog".format(pg_dir))
+				os.system("chown -R postgres.postgres {0}main/pg_xlog".format(pg_dir))
+			add_monitor(device, "pg_xlog")
 
 		# we tuned postgres for instance types, we also need help the kernel along
 		os.system('sysctl -w "kernel.shmall=4194304"')
@@ -227,5 +233,5 @@ if __name__ == '__main__':
 		# always overwrite the conf
 		set_conf()
 		add_postgresql_monitor()
-	except Exception as e:
+	else: #except Exception as e:
 		print "{0} could not be prepared ({1})".format(name, e)
