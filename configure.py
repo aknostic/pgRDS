@@ -49,7 +49,7 @@ pg_dir = '/var/lib/postgresql/9.1/'
 import psycopg2
 
 def pgbouncer():
-	os.system("sudo -u postgres psql -t -c \"select \\\"'||rolname||'\\\"'||' \\\"'||rolpassword||'\\\"' from pg_authid ;\" | sed 's/^\\s*//' | sed '/^$/d' > /etc/pgbouncer/userlist.txt")
+	os.system("sudo -u postgres psql -t -c \"select '\\\"'||rolname||'\\\"'||' \\\"'||rolpassword||'\\\"' from pg_authid ;\" | sed 's/^\s*//' | sed '/^$/d' > /etc/pgbouncer/userlist.txt")
 	os.system("/etc/init.d/pgbouncer restart")
 
 def monitor():
@@ -100,7 +100,7 @@ if __name__ == '__main__':
 						os.environ['HOSTED_ZONE_NAME'].rstrip('.'))
 
 	if sys.argv[3] == "start":
-		r53_zone.create_record(name, hostname)
+		#r53_zone.create_record(name, hostname)
 		ec2.create_tags([instance_id], { "Name": name })
 
 		# we only prepare the database when we are NOT subservient
