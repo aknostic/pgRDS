@@ -178,7 +178,7 @@ if __name__ == '__main__':
 	name = "{0}.{1}".format(userdata['name'],
 						os.environ['HOSTED_ZONE_NAME'].rstrip('.'))
 
-	if True: #try:
+	try:
 		set_cron()
 
 		# are we a new cluster, or a clone from another?
@@ -204,8 +204,6 @@ if __name__ == '__main__':
 
 		# set the correct permissions, and some other necessities
 		mount = pg_dir + "main"
-		os.system("rm -rf {0}/*".format(mount))
-
 		os.system("chmod 0700 {0}".format(mount))
 
 		# prepare the new filesystem for postgres
@@ -237,5 +235,5 @@ if __name__ == '__main__':
 		# always overwrite the conf
 		set_conf()
 		add_postgresql_monitor()
-	else: #except Exception as e:
+	except Exception as e:
 		print "{0} could not be prepared ({1})".format(name, e)
