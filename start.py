@@ -102,9 +102,10 @@ def set_cron():
 
 def set_conf():
 	bucket = userdata['cluster'].replace('.', '-')
-	conf = "{0}/etc/postgresql/9.1/main/{1}.conf".format(path, instance_type)
+	conf = "{0}/etc/postgresql/9.1/main/postgresql.conf".format(path)
 	type_conf = "{0}/etc/postgresql/9.1/main/{1}.conf".format(path, instance_type)
 	my_pgb_conf = "{0}/etc/pgbouncer/pgbouncer.ini".format(path)
+
 	os.system("cp {0} {1}".format(type_conf, pg_type_conf))
 	os.system("cp {0} {1}".format(conf, pg_conf))
 	os.system("cp {0} {1}".format(my_pgb_conf, pgb_conf))
