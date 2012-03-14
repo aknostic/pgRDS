@@ -42,7 +42,7 @@ except Exception as e:
 path = os.path.dirname(os.path.abspath(__file__))
 
 def unmonitor():
-	os.system("find {0}/etc/monit/ ! -name dummy -type f -delete".format(path))
+	os.system("find {0}/etc/monit/conf.d/ ! -name dummy -type f -delete".format(path))
 	os.system("/usr/sbin/monit reload")
 
 def unset_cron():

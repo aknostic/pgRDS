@@ -50,6 +50,7 @@ except Exception as e:
 
 pg_dir = '/var/lib/postgresql/9.1/'
 pg_conf = '/etc/postgresql/9.1/main/postgresql.conf'
+pg_type_conf = '/etc/postgresql/9.1/main/instance_type.conf'
 pgb_conf = '/etc/pgbouncer/pgbouncer.ini'
 
 # we are going to work with local files, we need our path
@@ -102,7 +103,9 @@ def set_cron():
 def set_conf():
 	bucket = userdata['cluster'].replace('.', '-')
 	conf = "{0}/etc/postgresql/9.1/main/{1}.conf".format(path, instance_type)
+	type_conf = "{0}/etc/postgresql/9.1/main/{1}.conf".format(path, instance_type)
 	my_pgb_conf = "{0}/etc/pgbouncer/pgbouncer.ini".format(path)
+	os.system("cp {0} {1}".format(type_conf, pg_type_conf))
 	os.system("cp {0} {1}".format(conf, pg_conf))
 	os.system("cp {0} {1}".format(my_pgb_conf, pgb_conf))
 	os.system("/bin/chown postgres.postgres {0}".format(pg_conf))
@@ -133,7 +136,7 @@ def set_recovery_conf():
 	os.system("rm -f {0}main/backup_label".format(pg_dir))
 
 def add_postgresql_monitor():
-	f = open( "{0}/etc/monit/postgresql".format(path), "w")
+	f = open( "{0}/etc/monit/conf.d/postgresql".format(path), "w")
 	f.write("  check process postgresql with pidfile /var/run/postgresql/9.1-main.pid")
 	f.write("	start program = \"/etc/init.d/postgresql start\"")
 	f.write("	stop  program = \"/etc/init.d/postgresql stop\"")
@@ -145,7 +148,7 @@ def add_postgresql_monitor():
 	f.close()
 
 def add_monitor(device="/dev/sdf", name="main"):
-	f = open( "{0}/etc/monit/{1}".format(path, name), "w")
+	f = open( "{0}/etc/monit/conf.d/{1}".format(path, name), "w")
 	f.write("  check filesystem {0} with path {1}".format(name, device))
 	f.write("	if failed permission 660 then alert")
 	f.write("	if failed uid root then alert")
