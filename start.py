@@ -112,7 +112,7 @@ def set_conf():
 	os.system("/bin/chown postgres.postgres {0}".format(pg_conf))
 	os.system("/bin/sed -i \x27s_s3://[^/]*/_s3://{0}/_\x27 {1}".format(bucket, pg_conf))
 	try:
-		slow = userdata['sow']
+		slow = userdata['slow']
 		os.system("/bin/sed -i \x27s/log_min_duration_statement.*/log_min_duration_statement = {0}/\x27 {1}".format(slow, pg_conf))
 	except:
 		pass
