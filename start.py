@@ -118,7 +118,10 @@ def set_conf():
 		pass
 
 def set_recovery_conf():
-	bucket = userdata['cluster'].replace('.', '-')
+	try:
+		bucket = userdata['clone'].replace('.', '-')
+	except:
+		bucket = userdata['cluster'].replace('.', '-')
 	f = open( "{0}/main/recovery.conf".format(pg_dir), "w")
 
 	f.write("restore_command = '/usr/bin/s3cmd --config=/var/lib/postgresql/.s3cfg get s3://{0}/archive/wal/%f %p'\n".format(bucket))
