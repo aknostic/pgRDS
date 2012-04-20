@@ -1,3 +1,3 @@
-import os, sys
+import os, sys, datetime
 
-os.system("sudo -u postgres psql -t -c \"select '\\\"'||rolname||'\\\"'||' \\\"'||rolpassword||'\\\"' from pg_authid ;\" | sed 's/^\s*//' | sed '/^$/d' > /etc/pgbouncer/userlist.txt")
+print datetime.datetime.now()

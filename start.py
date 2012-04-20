@@ -125,15 +125,14 @@ def set_recovery_conf():
 	f = open( "{0}/main/recovery.conf".format(pg_dir), "w")
 
 	f.write("restore_command = '/usr/bin/s3cmd --config=/var/lib/postgresql/.s3cfg get s3://{0}/archive/wal/%f %p'\n".format(bucket))
-	f.write("standby_mode = on\n")
 
 	# lets by humble, lets try to be a slave first
 	try:
 		f.write("primary_conninfo = 'host={0} port=5432 user={1} password={2}'\n".format(userdata['master'], settings.database_user, settings.database_password))
+		f.write("standby_mode = on\n")
 	except:
-		pass
+		f.write("recover_target_time = '{0}'\n".format(datetime.datetime.now()))
 
-	f.write("recovery_target_timeline = latest\n")
 	f.close()
 
 	# and make sure we get rid of backup_label
