@@ -131,7 +131,12 @@ def set_recovery_conf():
 		f.write("primary_conninfo = 'host={0} port=5432 user={1} password={2}'\n".format(userdata['master'], settings.database_user, settings.database_password))
 		f.write("standby_mode = on\n")
 	except:
-		f.write("recover_target_time = '{0}'\n".format(datetime.datetime.now()))
+		try:
+			timestamp = userdata['timestamp']
+		except:
+			timestamp = datetime.datetime.now()
+
+		f.write("recover_target_time = '{0}'\n".format(datetime))
 
 	f.close()
 
