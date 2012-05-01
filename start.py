@@ -16,7 +16,7 @@
 # along with Redis for AWS. If not, see <http://www.gnu.org/licenses/>.
 
 import os, sys, re, subprocess
-import json, urllib2
+import datetime, json, urllib2
 
 from boto.s3.connection import S3Connection
 from boto.s3.connection import Location
@@ -128,15 +128,29 @@ def set_recovery_conf():
 
 	# lets by humble, lets try to be a slave first
 	try:
+		master = userdata['master']
+	except:
+		master = None
+
+	try:
+		clone = userdata['clone']
+	except:
+		clone = None
+
+	try:
+		timestamp = userdata['timestamp']
+	except:
+		timestamp = datetime.datetime.now()
+	print clone
+	print timestamp
+
+	
+	if master != None:
 		f.write("primary_conninfo = 'host={0} port=5432 user={1} password={2}'\n".format(userdata['master'], settings.database_user, settings.database_password))
 		f.write("standby_mode = on\n")
-	except:
-		try:
-			timestamp = userdata['timestamp']
-		except:
-			timestamp = datetime.datetime.now()
-
-		f.write("recover_target_time = '{0}'\n".format(datetime))
+	
+	if clone != None:
+		f.write("recovery_target_time = '{0}'\n".format(timestamp))
 
 	f.close()
 
