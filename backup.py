@@ -91,7 +91,7 @@ def make_snapshot(key, access, cluster, name="main", expiration='weekly',
 
 	return ["{0}".format(snapshot.id), expires[expiration]]
 
-def purge_snapshots(key, access, name, snapshots):
+def purge_snapshots(key, access, cluster, snapshots):
 	region_info = RegionInfo(name=region,
 							endpoint="ec2.{0}.amazonaws.com".format(region))
 	ec2 = EC2Connection(key, access, region=region_info)
@@ -101,7 +101,7 @@ def purge_snapshots(key, access, name, snapshots):
 			print "deleting snapshot: {0}".format(snapshot['snapshot'])
 			administration.delete_snapshot(key,
 										access,
-										name,
+										cluster,
 										snapshot['snapshot'])
 
 def start_backup(label):
@@ -151,14 +151,20 @@ if __name__ == '__main__':
 	name = "{0}.{1}".format(name, hosted_zone)
 	cluster = userdata['cluster'].strip()
 
-	def snapshot_all(expiration="weekly"):
+	def snapshot_all(expiration="weekly", master=True):
 		# don't snapshot the WAL or root volume
 		for tablespace in userdata['tablespaces']:
 			backup = make_snapshot(sys.argv[2], sys.argv[3],
 									cluster, tablespace['name'],
 									expiration=expiration,
 									device=tablespace['device'])
-			administration.add_snapshot(sys.argv[2], sys.argv[3],
+			# we use "dummy" to make sure the backups are not used
+			# for restores
+			if not Master:
+				administration.add_snapshot(sys.argv[2], sys.argv[3],
+									cluster, "dummy", backup)
+			else:
+				administration.add_snapshot(sys.argv[2], sys.argv[3],
 									cluster, tablespace['name'], backup)
 			print "created {0} from {1}".format(backup[0], tablespace['name'])
 
@@ -170,6 +176,8 @@ if __name__ == '__main__':
 			start_backup(sys.argv[4])
 			snapshot_all()
 			stop_backup()
+		else:
+			snapshot_all("hourly", False)
 	elif "snapshot" == sys.argv[1]:
 		backup = make_snapshot(sys.argv[2], sys.argv[3],
 								cluster, sys.argv[4], sys.argv[5])
@@ -179,8 +187,8 @@ if __name__ == '__main__':
 		snapshot_all()
 	elif "purge" == sys.argv[1]:
 		snapshots = administration.get_expired_snapshots(sys.argv[2],
-										sys.argv[3], name)
-		purge_snapshots(sys.argv[2], sys.argv[3], name, snapshots)
+										sys.argv[3], cluster)
+		purge_snapshots(sys.argv[2], sys.argv[3], cluster, snapshots)
 
 	elif "purge-all" == sys.argv[1]:
 		snapshots = administration.get_all_snapshots(sys.argv[2],

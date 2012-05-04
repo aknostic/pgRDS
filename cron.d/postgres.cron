@@ -5,6 +5,7 @@ MAILTO=fashiolista@9apps.net
 # make a backup
 date=$(date +"%Y%m%d-%H%M%S")
 00 06 * * * /root/pgRDS/backup.sh basebackup ${date} > /dev/null 2>&1
+00 12 * * * /root/pgRDS/backup.sh purge > /dev/null 2>&1
 
 # purge older WAL segments
 00 06 * * * /usr/bin/find /var/lib/postgresql/9.1/main/pg_xlog -type f -mtime +7 -delete
