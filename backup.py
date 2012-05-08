@@ -160,7 +160,7 @@ if __name__ == '__main__':
 									device=tablespace['device'])
 			# we use "dummy" to make sure the backups are not used
 			# for restores
-			if not Master:
+			if not master:
 				administration.add_snapshot(sys.argv[2], sys.argv[3],
 									cluster, "dummy", backup)
 			else:
