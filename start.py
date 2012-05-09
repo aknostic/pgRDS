@@ -152,6 +152,8 @@ def set_recovery_conf():
 	if clone != None:
 		f.write("recovery_target_time = '{0}'\n".format(timestamp))
 
+	f.write("recovery_target_timeline = latest\n")
+
 	f.close()
 
 	# and make sure we get rid of backup_label
