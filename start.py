@@ -152,7 +152,8 @@ def set_recovery_conf():
 	if clone != None:
 		f.write("recovery_target_time = '{0}'\n".format(timestamp))
 
-	f.write("recovery_target_timeline = latest\n")
+	# don't know if/how this works
+	#f.write("recovery_target_timeline = latest\n")
 
 	f.close()
 
