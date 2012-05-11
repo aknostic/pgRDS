@@ -146,7 +146,7 @@ def set_recovery_conf():
 
 	
 	if master != None:
-		f.write("primary_conninfo = 'host={0} port=5432 user={1} password={2}'\n".format(userdata['master'], settings.database_user, settings.database_password))
+		f.write("primary_conninfo = 'host={0} port=5432 user={1} password={2} sslmode={3}'\n".format(userdata['master'], settings.database_user, settings.database_password, settings.sslmode))
 		f.write("standby_mode = on\n")
 	
 	if clone != None:
