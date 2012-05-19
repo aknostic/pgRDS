@@ -9,3 +9,6 @@ date=$(date +"%Y%m%d-%H%M%S")
 
 # purge older WAL segments
 00 06 * * * /usr/bin/find /var/lib/postgresql/9.1/main/pg_xlog -type f -mtime +7 -delete
+
+# and monitor
+* * * * * /root/pgRDS/monitor.sh > /dev/null 2>&1
