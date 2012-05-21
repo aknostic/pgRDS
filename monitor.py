@@ -56,10 +56,24 @@ class Monitor:
 		self.namespace = '9apps/postgres'
 
 		self.connection = psycopg2.connect(host=settings.host,
-								port=6432,
+								port=5432,
 								dbname=settings.database_name,
 								user=settings.database_user,
 								password=settings.database_password)
+
+		# now, the non-system database connections
+		self.databases = []
+		try:
+			database_cursor = self.connection.cursor()
+
+			database_cursor.execute("select datname from pg_stat_database where datname !~ '(template[0-9]+|root|postgres)'")
+			for database in database_cursor:
+				self.databases.append([database[0],
+								psycopg2.connect(host=settings.host, port=5432,
+								dbname=database[0], user=settings.database_user,
+								password=settings.database_password)])
+		finally:
+			database_cursor.close()
 
 	def __del__(self):
 		self.connection.close()
@@ -89,44 +103,32 @@ class Monitor:
 		dimensions = { 'name' : self.name,
 					'cluster' : self.cluster }
 
-		try:
-			master = psycopg2.connect(host=self.userdata['master'],
-							dbname=settings.database_name,
-							user=settings.database_user,
-							password=settings.database_password)
+		[offset, receive_offset, replay_offset] = self._get_standby_lag()
 
-			master.autocommit = True
-			try:
-				cursor = master.cursor()
-				cursor.execute( "SELECT pg_current_xlog_location() AS location")
-				[x, y] = (cursor.fetchone()[0]).split('/')
-				offset = (int('ff000000', 16) * int(x, 16)) + int(y, 16)
-			finally:
-				cursor.close()
+		names.append('receive_lag')
+		values.append(int(offset - receive_offset))
+		units.append('Bytes')
 
-			try:
-				cursor = self.connection.cursor()
+		names.append('replay_lag')
+		values.append(int(offset - replay_offset))
+		units.append('Bytes')
 
-				cursor.execute( "SELECT pg_last_xlog_receive_location(), pg_last_xlog_replay_location()")
-				one = cursor.fetchone()
-				
-				[x, y] = (one[0]).split('/')
-				receive_offset = (int('ff000000', 16) * int(x, 16)) + int(y, 16)
-				
-				[x, y] = (one[0]).split('/')
-				replay_offset = (int('ff000000', 16) * int(x, 16)) + int(y, 16)
-			finally:
-				cursor.close()
+		for database in self.databases:
+			for relation in ["heap", "idx"]:
+				[read, hit, hitratio] = self._get_hitratio(database[1], relation)
 
-			names.append('receive_lag')
-			values.append(offset - receive_offset)
-			units.append('Bytes')
+				names.append("{0}_{1}_read".format(database[0], relation))
+				values.append(int(read))
+				units.append("Count")
 
-			names.append('replay_lag')
-			values.append(offset - replay_offset)
-			units.append('Bytes')
-		finally:
-			master.close()
+				names.append("{0}_{1}_hit".format(database[0], relation))
+				values.append(int(hit))
+				units.append("Count")
+
+				if hitratio != None:
+					names.append("{0}_{1}_hitratio".format(database[0], relation))
+					values.append(float(hitratio * 100))
+					units.append("Percent")
 
 		return [names, values, units, dimensions]
 
@@ -167,6 +169,53 @@ class Monitor:
 	
 	def metrics(self):
 		return self.cloudwatch.list_metrics()
+
+	def _get_hitratio(self, connection, relation="heap"):
+		try:
+			cursor = connection.cursor()
+
+			sql = "select sum({0}_blks_read) as read, sum({0}_blks_hit) as hit, (sum({0}_blks_hit) - sum({0}_blks_read)) / nullif(sum({0}_blks_hit),0) as hitratio from pg_statio_user_tables".format(relation)
+			cursor.execute(sql)
+			
+			[read, hit, hitratio] = cursor.fetchone()
+		finally:
+			cursor.close()
+
+		return [read, hit, hitratio]
+
+	def _get_standby_lag(self):
+		try:
+			master = psycopg2.connect(host=self.userdata['master'],
+							dbname=settings.database_name,
+							user=settings.database_user,
+							password=settings.database_password)
+
+			master.autocommit = True
+			try:
+				cursor = master.cursor()
+				cursor.execute( "SELECT pg_current_xlog_location() AS location")
+				[x, y] = (cursor.fetchone()[0]).split('/')
+				offset = (int('ff000000', 16) * int(x, 16)) + int(y, 16)
+			finally:
+				cursor.close()
+
+			try:
+				cursor = self.connection.cursor()
+
+				cursor.execute( "SELECT pg_last_xlog_receive_location(), pg_last_xlog_replay_location()")
+				one = cursor.fetchone()
+				
+				[x, y] = (one[0]).split('/')
+				receive_offset = (int('ff000000', 16) * int(x, 16)) + int(y, 16)
+				
+				[x, y] = (one[0]).split('/')
+				replay_offset = (int('ff000000', 16) * int(x, 16)) + int(y, 16)
+			finally:
+				cursor.close()
+		finally:
+			master.close()
+
+		return [offset, receive_offset, replay_offset]
 
 if __name__ == '__main__':
 	key = os.environ['EC2_KEY_ID']
