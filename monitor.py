@@ -130,6 +130,27 @@ class Monitor:
 					values.append(float(hitratio * 100))
 					units.append("Percent")
 
+			conflicts = self._get_conflicts(database[0])
+			names.append("{0}_{1}_hit".format(database[0], 'confl_tablespace'))
+			values.append(int(conflicts[0]))
+			units.append("Count")
+
+			names.append("{0}_{1}_hit".format(database[0], 'confl_lock'))
+			values.append(int(conflicts[1]))
+			units.append("Count")
+
+			names.append("{0}_{1}_hit".format(database[0], 'confl_snapshot'))
+			values.append(int(conflicts[2]))
+			units.append("Count")
+
+			names.append("{0}_{1}_hit".format(database[0], 'confl_bufferpin'))
+			values.append(int(conflicts[3]))
+			units.append("Count")
+
+			names.append("{0}_{1}_hit".format(database[0], 'confl_deadlock'))
+			values.append(int(conflicts[4]))
+			units.append("Count")
+
 		return [names, values, units, dimensions]
 
 	def put(self):
@@ -169,6 +190,20 @@ class Monitor:
 	
 	def metrics(self):
 		return self.cloudwatch.list_metrics()
+
+	def _get_conflicts(self, database):
+		try:
+			cursor = self.connection.cursor()
+
+			sql = "select * from pg_stat_database_conflicts where datname = '{0}'".format(database)
+			cursor.execute(sql)
+
+			conflicts = cursor.fetchone()
+		finally:
+			cursor.close()
+
+		return [conflicts[2], conflicts[3], conflicts[4], 
+				conflicts[5], conflicts[6]] 
 
 	def _get_hitratio(self, connection, relation="heap"):
 		if relation == "heap":
