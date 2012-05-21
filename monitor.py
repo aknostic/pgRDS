@@ -23,6 +23,7 @@ from urllib2 import urlopen
 from datetime import datetime
 
 import psycopg2
+import psycopg2.extras
 
 from boto.ec2.cloudwatch import CloudWatchConnection
 from boto.ec2.regioninfo import RegionInfo
@@ -80,6 +81,8 @@ class Monitor:
 								dbname='pgbouncer',
 								user=settings.database_user,
 								password=settings.database_password)
+		# without this it doesn't work
+		self.pgbouncer.set_isolation_level(0)
 
 	def __del__(self):
 		self.connection.close()
@@ -109,15 +112,16 @@ class Monitor:
 		dimensions = { 'name' : self.name,
 					'cluster' : self.cluster }
 
-		[offset, receive_offset, replay_offset] = self._get_standby_lag()
+		if 'master' in self.userdata:
+			[offset, receive_offset, replay_offset] = self._get_standby_lag()
 
-		names.append('receive_lag')
-		values.append(int(offset - receive_offset))
-		units.append('Bytes')
+			names.append('receive_lag')
+			values.append(int(offset - receive_offset))
+			units.append('Bytes')
 
-		names.append('replay_lag')
-		values.append(int(offset - replay_offset))
-		units.append('Bytes')
+			names.append('replay_lag')
+			values.append(int(offset - replay_offset))
+			units.append('Bytes')
 
 		for database in self.databases:
 			for relation in ["heap", "idx"]:
@@ -167,6 +171,64 @@ class Monitor:
 			values.append(int(tables_size))
 			units.append("Bytes")
 
+		# nr of wal files
+		size = self._get_nr_wal_files()
+		names.append("wal_files")
+		values.append(int(size))
+		units.append("Count")
+
+		# pgbouncer stats
+		stats = self._get_pgbouncer_stats()
+		names.append("pgbouncer_avg_req")
+		values.append(int(stats[0]))
+		units.append("Count/Second")
+
+		names.append("pgbouncer_avg_recv")
+		values.append(int(stats[1]))
+		units.append("Bytes/Second")
+
+		names.append("pgbouncer_avg_sent")
+		values.append(int(stats[2]))
+		units.append("Bytes/Second")
+
+		names.append("pgbouncer_avg_query")
+		values.append(float(stats[3] / 1000000))
+		units.append("Seconds")
+
+		# pgbouncer pools
+		pools = self._get_pgbouncer_pools()
+		names.append("pgbouncer_cl_active")
+		values.append(float(pools[0]))
+		units.append("Count")
+
+		names.append("pgbouncer_cl_waiting")
+		values.append(float(pools[1]))
+		units.append("Count")
+
+		names.append("pgbouncer_sv_active")
+		values.append(float(pools[2]))
+		units.append("Count")
+
+		names.append("pgbouncer_sv_idle")
+		values.append(float(pools[3]))
+		units.append("Count")
+
+		names.append("pgbouncer_sv_used")
+		values.append(float(pools[4]))
+		units.append("Count")
+
+		names.append("pgbouncer_sv_tested")
+		values.append(float(pools[5]))
+		units.append("Count")
+
+		names.append("pgbouncer_sv_login")
+		values.append(float(pools[6]))
+		units.append("Count")
+
+		names.append("pgbouncer_maxwait")
+		values.append(float(pools[7]))
+		units.append("Count")
+
 		return [names, values, units, dimensions]
 
 	def put(self):
@@ -180,7 +242,6 @@ class Monitor:
 		if monitoring in ['on', 'all']:
 			# first get all we need
 			[names, values, units, dimensions] = self.collect(monitoring)
-			print [names, values, units, dimensions]
 			while len(names) > 0:
 				names20 = names[:20]
 				values20 = values[:20]
@@ -206,6 +267,19 @@ class Monitor:
 	
 	def metrics(self):
 		return self.cloudwatch.list_metrics()
+
+	def _get_nr_wal_files(self):
+		try:
+			cursor = self.connection.cursor()
+
+			sql = "select count(name) from (select pg_ls_dir('pg_xlog') as name) as xlogs where name != 'archive_status'"
+			cursor.execute(sql)
+			
+			[size] = cursor.fetchone()
+		finally:
+			cursor.close()
+
+		return size
 
 	def _get_tables_size(self, connection):
 		try:
@@ -300,7 +374,41 @@ class Monitor:
 		return [offset, receive_offset, replay_offset]
 
 	def _get_pgbouncer_stats(self):
-		return None
+		try:
+			cursor = self.pgbouncer.cursor()
+			cursor.execute('show stats')
+
+			# ('pgbouncer\x00', 119L, 0L, 0L, 0L, 0L, 0L, 0L, 0L)
+			[name, total_requests, total_received,
+				total_sent, total_query_time, avg_req,
+				avg_recv, avg_sent, avg_query] = cursor.fetchone()
+		finally:
+			cursor.close()
+
+		return [avg_req, avg_recv, avg_sent, avg_query]
+
+	def _get_pgbouncer_pools(self):
+		cl_active = cl_waiting = sv_active = sv_idle = 0
+		sv_used = sv_tested = sv_login = maxwait = 0
+		try:
+			cursor = self.pgbouncer.cursor()
+			cursor.execute('show pools')
+
+			# ('pgbouncer\x00', 'pgbouncer\x00', 1, 0, 0, 0, 0, 0, 0, 0)
+			for pool in cursor:
+				cl_active += pool[2]
+				cl_waiting += pool[3]
+				sv_active += pool[4]
+				sv_idle += pool[5]
+				sv_used += pool[6]
+				sv_tested += pool[7]
+				sv_login += pool[8]
+				maxwait = max(maxwait, pool[9])
+		finally:
+			cursor.close()
+
+		return [cl_active, cl_waiting, sv_active, sv_idle,
+					sv_used, sv_tested, sv_login, maxwait]
 
 if __name__ == '__main__':
 	key = os.environ['EC2_KEY_ID']
