@@ -75,6 +75,12 @@ class Monitor:
 		finally:
 			database_cursor.close()
 
+		self.pgbouncer = psycopg2.connect(host=settings.host,
+								port=6432,
+								dbname='pgbouncer',
+								user=settings.database_user,
+								password=settings.database_password)
+
 	def __del__(self):
 		self.connection.close()
 
@@ -131,25 +137,35 @@ class Monitor:
 					units.append("Percent")
 
 			conflicts = self._get_conflicts(database[0])
-			names.append("{0}_{1}_hit".format(database[0], 'confl_tablespace'))
+			names.append("{0}_{1}".format(database[0], 'confl_tablespace'))
 			values.append(int(conflicts[0]))
 			units.append("Count")
 
-			names.append("{0}_{1}_hit".format(database[0], 'confl_lock'))
+			names.append("{0}_{1}".format(database[0], 'confl_lock'))
 			values.append(int(conflicts[1]))
 			units.append("Count")
 
-			names.append("{0}_{1}_hit".format(database[0], 'confl_snapshot'))
+			names.append("{0}_{1}".format(database[0], 'confl_snapshot'))
 			values.append(int(conflicts[2]))
 			units.append("Count")
 
-			names.append("{0}_{1}_hit".format(database[0], 'confl_bufferpin'))
+			names.append("{0}_{1}".format(database[0], 'confl_bufferpin'))
 			values.append(int(conflicts[3]))
 			units.append("Count")
 
-			names.append("{0}_{1}_hit".format(database[0], 'confl_deadlock'))
+			names.append("{0}_{1}".format(database[0], 'confl_deadlock'))
 			values.append(int(conflicts[4]))
 			units.append("Count")
+
+			indexes_size = self._get_indexes_size(database[1])
+			names.append("{0}_indexes_size".format(database[0]))
+			values.append(int(indexes_size))
+			units.append("Bytes")
+
+			tables_size = self._get_tables_size(database[1])
+			names.append("{0}_tables_size".format(database[0]))
+			values.append(int(tables_size))
+			units.append("Bytes")
 
 		return [names, values, units, dimensions]
 
@@ -190,6 +206,32 @@ class Monitor:
 	
 	def metrics(self):
 		return self.cloudwatch.list_metrics()
+
+	def _get_tables_size(self, connection):
+		try:
+			cursor = connection.cursor()
+
+			sql = "select sum(pg_table_size(relid)) from pg_stat_user_tables"
+			cursor.execute(sql)
+			
+			[size] = cursor.fetchone()
+		finally:
+			cursor.close()
+
+		return size
+
+	def _get_indexes_size(self, connection):
+		try:
+			cursor = connection.cursor()
+
+			sql = "select sum(pg_indexes_size(relid)) from pg_stat_user_indexes"
+			cursor.execute(sql)
+			
+			[size] = cursor.fetchone()
+		finally:
+			cursor.close()
+
+		return size
 
 	def _get_conflicts(self, database):
 		try:
@@ -256,6 +298,9 @@ class Monitor:
 			master.close()
 
 		return [offset, receive_offset, replay_offset]
+
+	def _get_pgbouncer_stats(self):
+		return None
 
 if __name__ == '__main__':
 	key = os.environ['EC2_KEY_ID']
