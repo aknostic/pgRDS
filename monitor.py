@@ -171,10 +171,15 @@ class Monitor:
 		return self.cloudwatch.list_metrics()
 
 	def _get_hitratio(self, connection, relation="heap"):
+		if relation == "heap":
+			table = "tables"
+		else:
+			table = "indexes"
+
 		try:
 			cursor = connection.cursor()
 
-			sql = "select sum({0}_blks_read) as read, sum({0}_blks_hit) as hit, (sum({0}_blks_hit) - sum({0}_blks_read)) / nullif(sum({0}_blks_hit),0) as hitratio from pg_statio_user_tables".format(relation)
+			sql = "select sum({0}_blks_read) as read, sum({0}_blks_hit) as hit, (sum({0}_blks_hit) - sum({0}_blks_read)) / nullif(sum({0}_blks_hit),0) as hitratio from pg_statio_user_{1}".format(relation, table)
 			cursor.execute(sql)
 			
 			[read, hit, hitratio] = cursor.fetchone()
