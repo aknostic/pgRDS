@@ -259,6 +259,8 @@ if __name__ == '__main__':
 		# we tuned postgres for instance types, we also need help the kernel along
 		os.system('sysctl -w "kernel.shmall=4194304"')
 		os.system('sysctl -w "kernel.shmmax={0}"'.format(meminfo()['MemTotal'] * 1024))
+		# and lower the chances of being shot
+		os.system('sysctl -w "vm.overcommit_memory=2"')
 
 		# always overwrite the conf
 		set_conf()

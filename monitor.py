@@ -115,13 +115,15 @@ class Monitor:
 		if 'master' in self.userdata:
 			[offset, receive_offset, replay_offset] = self._get_standby_lag()
 
-			names.append('receive_lag')
-			values.append(int(offset - receive_offset))
-			units.append('Bytes')
+			if receive_offset != None:
+				names.append('receive_lag')
+				values.append(int(offset - receive_offset))
+				units.append('Bytes')
 
-			names.append('replay_lag')
-			values.append(int(offset - replay_offset))
-			units.append('Bytes')
+			if replay_offset != None:
+				names.append('replay_lag')
+				values.append(int(offset - replay_offset))
+				units.append('Bytes')
 
 		for database in self.databases:
 			for relation in ["heap", "idx"]:
@@ -361,11 +363,17 @@ class Monitor:
 				cursor.execute( "SELECT pg_last_xlog_receive_location(), pg_last_xlog_replay_location()")
 				one = cursor.fetchone()
 				
-				[x, y] = (one[0]).split('/')
-				receive_offset = (int('ff000000', 16) * int(x, 16)) + int(y, 16)
+				try:
+					[x, y] = (one[0]).split('/')
+					receive_offset = (int('ff000000', 16) * int(x, 16)) + int(y, 16)
+				except:
+					receive_offset = None
 				
-				[x, y] = (one[0]).split('/')
-				replay_offset = (int('ff000000', 16) * int(x, 16)) + int(y, 16)
+				try:
+					[x, y] = (one[1]).split('/')
+					replay_offset = (int('ff000000', 16) * int(x, 16)) + int(y, 16)
+				except:
+					replay_offset = None
 			finally:
 				cursor.close()
 		finally:
