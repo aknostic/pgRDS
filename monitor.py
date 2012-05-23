@@ -285,7 +285,7 @@ class Monitor:
 		try:
 			cursor = connection.cursor()
 
-			sql = "select sum(pg_table_size(relid)) from pg_stat_user_tables"
+			sql = "select sum(pg_relation_size(relid)) from pg_stat_user_tables"
 			cursor.execute(sql)
 			
 			[size] = cursor.fetchone()
@@ -298,7 +298,7 @@ class Monitor:
 		try:
 			cursor = connection.cursor()
 
-			sql = "select sum(pg_indexes_size(relid)) from pg_stat_user_indexes"
+			sql = "select sum(pg_relation_size(indexrelid)) from pg_stat_user_indexes"
 			cursor.execute(sql)
 			
 			[size] = cursor.fetchone()
