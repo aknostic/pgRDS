@@ -242,8 +242,9 @@ if __name__ == '__main__':
 			os.symlink( "/etc/ssl/private/ssl-cert-snakeoil.key",
 						"{0}/server.key".format(mount))
 		else:
-			# we do have a postgresql.conf, we must restore
-			set_recovery_conf()
+			# we do have a postgresql.conf, we must restore (as long as user data lets us)
+ 			if not userdata['recovery'] == 'no':
+  			 	set_recovery_conf()
 
 		# and now, create a separate WAL mount
 		# (has to be only now, pg_ctl doesn't like a non-empty pg dir)
