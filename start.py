@@ -141,8 +141,6 @@ def set_recovery_conf():
 		timestamp = userdata['timestamp']
 	except:
 		timestamp = datetime.datetime.now()
-	print clone
-	print timestamp
 
 	
 	if master != None:
@@ -243,7 +241,7 @@ if __name__ == '__main__':
 						"{0}/server.key".format(mount))
 		else:
 			# we do have a postgresql.conf, we must restore (as long as user data lets us)
- 			if not userdata['recovery'] == 'no':
+ 			if 'recovery' in userdata and not userdata['recovery'] == 'no':
   			 	set_recovery_conf()
 
 		# and now, create a separate WAL mount
