@@ -241,7 +241,7 @@ if __name__ == '__main__':
 						"{0}/server.key".format(mount))
 		else:
 			# we do have a postgresql.conf, we must restore (as long as user data lets us)
- 			if 'recovery' in userdata and not userdata['recovery'] == 'no':
+ 			if 'recovery' not in userdata or userdata['recovery'] != 'no':
   			 	set_recovery_conf()
 
 		# and now, create a separate WAL mount
