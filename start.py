@@ -150,7 +150,7 @@ def set_recovery_conf():
 	
 	if clone != None:
 		f.write("recovery_target_time = '{0}'\n".format(timestamp))
-		f.write("recovery_end_command = 'sudo -u postgres /usr/lib/postgresql/9.1/bin/psql postgres -c \"select pg_xlog_replay_resume();\"'\n")
+		f.write("recovery_end_command = '/usr/lib/postgresql/9.1/bin/psql postgres -c \"select pg_xlog_replay_resume();\"'\n")
 
 	# don't know if/how this works
 	#f.write("recovery_target_timeline = latest\n")
