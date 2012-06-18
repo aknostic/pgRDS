@@ -146,12 +146,11 @@ def set_recovery_conf():
 	if master != None:
 		f.write("primary_conninfo = 'host={0} port=5432 user={1} password={2} sslmode={3}'\n".format(userdata['master'], settings.database_user, settings.database_password, settings.sslmode))
 		f.write("standby_mode = on\n")
-	else:
-		f.write("pause_at_recovery_target = false\n")
-		f.write("recovery_end_command = '/etc/init.d/pgbouncer restart'\n")
 	
 	if clone != None:
 		f.write("recovery_target_time = '{0}'\n".format(timestamp))
+		f.write("pause_at_recovery_target = false\n")
+		f.write("recovery_end_command = '/etc/init.d/pgbouncer restart'\n")
 
 	# don't know if/how this works
 	#f.write("recovery_target_timeline = latest\n")
@@ -245,6 +244,8 @@ if __name__ == '__main__':
 		else:
 			# we do have a postgresql.conf, we must restore (as long as user data lets us)
  			if 'recovery' not in userdata or userdata['recovery'] != 'no':
+				# first, force masterdom
+				os.system("/bin/sed -i \x27s/hot_standby = on/hot_standby = off/\x27 {1}".format(pg_conf))
   			 	set_recovery_conf()
 
 		# and now, create a separate WAL mount
