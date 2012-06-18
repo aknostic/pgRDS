@@ -116,7 +116,7 @@ def set_conf():
 
 	# first, force masterdom
 	if 'recovery' not in userdata or userdata['recovery'] != 'no':
-		os.system("/bin/sed -i \x27s/hot_standby = on/hot_standby = off/\x27 {1}".format(pg_conf))
+		os.system("/bin/sed -i \x27s/hot_standby = on/hot_standby = off/\x27 {0}".format(pg_conf))
 
 def set_recovery_conf():
 	try:
