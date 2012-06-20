@@ -100,6 +100,8 @@ if __name__ == '__main__':
 						os.environ['HOSTED_ZONE_NAME'].rstrip('.'))
 
 	if sys.argv[3] == "start":
+		# make sure others can check on us (logfiles)
+		os.system('chmod 644 /var/log/postgresql/*.log')
 		# don't hijack the record, but do continue
 		try:
 			r53_zone.create_record(name, hostname)
@@ -108,9 +110,7 @@ if __name__ == '__main__':
 		ec2.create_tags([instance_id], { "Name": name })
 
 		# we only prepare the database when we are NOT subservient
-		try:
-			slave = userdata['slave']
-		except:
+		if 'master' in userdata:
 			prepare_database()
 
 		pgbouncer()

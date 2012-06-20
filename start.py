@@ -115,7 +115,7 @@ def set_conf():
 		os.system("/bin/sed -i \x27s/log_min_duration_statement.*/log_min_duration_statement = {0}/\x27 {1}".format(slow, pg_conf))
 
 	# first, force masterdom
-	if 'recovery' not in userdata or userdata['recovery'] != 'no':
+	if 'master' not in userdata and ('recovery' not in userdata or userdata['recovery'] != 'no'):
 		os.system("/bin/sed -i \x27s/hot_standby = on/hot_standby = off/\x27 {0}".format(pg_conf))
 
 def set_recovery_conf():
@@ -150,7 +150,8 @@ def set_recovery_conf():
 	
 	if clone != None:
 		f.write("recovery_target_time = '{0}'\n".format(timestamp))
-		f.write("recovery_end_command = '/usr/lib/postgresql/9.1/bin/psql postgres -c \"select pg_xlog_replay_resume();\"'\n")
+		f.write("pause_at_recovery_target = false\n")
+		#f.write("recovery_end_command = '/usr/lib/postgresql/9.1/bin/psql postgres -c \"select pg_xlog_replay_resume();\"'\n")
 
 	# don't know if/how this works
 	#f.write("recovery_target_timeline = latest\n")
