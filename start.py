@@ -147,14 +147,12 @@ def set_recovery_conf():
 	if master != None:
 		f.write("primary_conninfo = 'host={0} port=5432 user={1} password={2} sslmode={3}'\n".format(userdata['master'], settings.database_user, settings.database_password, settings.sslmode))
 		f.write("standby_mode = on\n")
+		# difficult option, but we need it for slaves
+		f.write("recovery_target_timeline = latest\n")
 	
 	if clone != None:
 		f.write("recovery_target_time = '{0}'\n".format(timestamp))
 		f.write("pause_at_recovery_target = false\n")
-		#f.write("recovery_end_command = '/usr/lib/postgresql/9.1/bin/psql postgres -c \"select pg_xlog_replay_resume();\"'\n")
-
-	# don't know if/how this works
-	#f.write("recovery_target_timeline = latest\n")
 
 	f.close()
 
