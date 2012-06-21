@@ -97,12 +97,16 @@ def purge_snapshots(key, access, cluster, snapshots):
 	ec2 = EC2Connection(key, access, region=region_info)
 
 	for snapshot in snapshots:
-		if ec2.delete_snapshot(snapshot['snapshot']):
+		try:
 			print "deleting snapshot: {0}".format(snapshot['snapshot'])
-			administration.delete_snapshot(key,
-										access,
-										cluster,
-										snapshot['snapshot'])
+			ec2.delete_snapshot(snapshot['snapshot'])
+		except:
+			pass
+
+		administration.delete_snapshot(key,
+									access,
+									cluster,
+									snapshot['snapshot'])
 
 def start_backup(label):
 	conn = psycopg2.connect(host=settings.host,
